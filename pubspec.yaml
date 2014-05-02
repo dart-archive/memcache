@@ -1,0 +1,5 @@
+name: memcache
+version: 0.1.0
+author: Dart Team
+dev_dependencies:
+  unittest: any
