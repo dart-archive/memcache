@@ -29,6 +29,7 @@ abstract class RawMemcache {
   Future<List<GetResult>> get(List<GetOperation> batch);
   Future<List<SetResult>> set(List<SetOperation> batch);
   Future<List<RemoveResult>> remove(List<RemoveOperation> batch);
+  Future<List<IncrementResult>> increment(List<IncrementOperation> batch);
   Future clear();
 }
 
@@ -36,6 +37,8 @@ class GetOperation {
   final List<int> key;
 
   GetOperation(this.key);
+
+  String toString() => 'GetOperation(key: $key)';
 }
 
 class GetResult {
@@ -65,6 +68,10 @@ class SetOperation {
   final List<int> value;
 
   SetOperation(this.operation, this.key, this.flags, this.cas, this.value);
+
+  String toString() =>
+      'SetOperation(operation: $operation, key: $key, flags: $flags, '
+      'cas: $cas, value: $value)';
 }
 
 class SetResult {
@@ -80,6 +87,8 @@ class RemoveOperation {
   final List<int> key;
 
   RemoveOperation(this.key);
+
+  String toString() => 'RemoveOperation(key: $key)';
 }
 
 class RemoveResult {
@@ -89,4 +98,32 @@ class RemoveResult {
   RemoveResult(this.status, this.message);
 
   String toString() => 'RemoveResult(status: $status, message: $message)';
+}
+
+class IncrementOperation {
+  static const int INCREMENT = 0;
+  static const int DECREMENT = 1;
+
+  final List<int> key;
+  final int delta;
+  final int direction;
+  final int initialFlags;
+  final int initialValue;
+
+  IncrementOperation(this.key, this.delta, this.direction,
+                     this.initialFlags, this.initialValue);
+
+  String toString() =>
+      'IncrementOperation(key: $key, delta: $delta, direction: $direction, '
+      'initialFlags: $initialFlags, initialValue: $initialValue)';
+}
+
+class IncrementResult {
+  final Status status;
+  final String message;
+  final int value;
+
+  IncrementResult(this.status, this.message, this.value);
+
+  String toString() => 'IncrementResult(status: $status, message: $message)';
 }

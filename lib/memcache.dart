@@ -146,6 +146,37 @@ abstract class Memcache {
   Future removeAll(Iterable keys);
 
   /**
+   * Increments the value of a key in the memcache.
+   *
+   * The current value of [key] will be incremented with the value [delta]. If
+   * [key] does not exist it will be added with the value [initialValue].
+   *
+   * Increment in memcache works on 64-bit unsigned integers. if incrementing
+   * causes the value to exceed the maximum value for a 64-bit integer the
+   * value will wrap.
+   *
+   * If the value is negative this will work as if `decrement` was called.
+   *
+   * The updated value is returned.
+   */
+  Future<int> increment(key, {int delta: 1, int initialValue: 0});
+
+  /**
+   * Decrement the value of a key in the memcache.
+   *
+   * The current value of [key] will be incremented with the value [delta]. If
+   * [key] does not exist it will be added with the value [initialValue].
+   *
+   * Decrement in memcache works on 64-bit unsigned integers. If decrementing
+   * causes the value to become negative it will stay at 0.
+   *
+   * If the value is negative this will work as if `increment` was called.
+   *
+   * The updated value is returned.
+   */
+  Future<int> decrement(key, {int delta: 1, int initialValue: 0});
+
+  /**
    * Delete all items in the cache.
    *
    * If [expiration] is set the flushing of the cache will happen after that

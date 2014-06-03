@@ -61,6 +61,15 @@ class MemCacheImpl implements Memcache {
     return new raw.RemoveOperation(_createKey(key));
   }
 
+  raw.IncrementOperation _createIncrementOperation(
+      Object key, int direction, int delta, int initialValue) {
+    if (delta is! int) {
+      throw new ArgumentError('Delta value must have type int');
+    }
+    return new raw.IncrementOperation(
+        _createKey(key), delta, direction, 0, initialValue);
+  }
+
   Future get(Object key, {bool asBinary: false}) {
     return new Future.sync(() => _raw.get([_createGetOperation(key)]))
         .then((List<raw.GetResult> response) {
@@ -168,6 +177,27 @@ class MemCacheImpl implements Memcache {
         return null;
       });
     });
+  }
+
+  Future<int> increment(key, {int delta: 1, int initialValue: 0}) {
+    var direction = delta >= 0 ? raw.IncrementOperation.INCREMENT
+                               : raw.IncrementOperation.DECREMENT;
+    return new Future.sync(() => _raw.increment(
+        [_createIncrementOperation(key, direction, delta.abs(), initialValue)]))
+        .then((List<raw.IncrementResult> response) {
+          if (response.length != 1) {
+            // TODO(sgjesse): Improve error.
+            throw new MemcacheError(null, 'Internal error');
+          }
+          if (response[0].status != raw.Status.NO_ERROR) {
+            throw new MemcacheError(response[0].status, response[0].message);
+          }
+          return response[0].value;
+        });
+  }
+
+  Future<int> decrement(key, {int delta: 1, int initialValue: 0}) {
+    return increment(key, delta: -delta, initialValue: initialValue);
   }
 
   Future clear({Duration expiration}) {

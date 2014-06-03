@@ -12,6 +12,18 @@ import '../lib/src/memcache_impl.dart';
 
 import 'mock_raw_memcache.dart';
 
+class IncrementDecrementTestData {
+  final key;
+  final delta;
+  final initialValue;
+  final expected;
+
+  IncrementDecrementTestData(this.key,
+                             this.delta,
+                             this.initialValue,
+                             this.expected);
+}
+
 main() {
   var ok = new raw.SetResult(raw.Status.NO_ERROR, null);
 
@@ -309,6 +321,157 @@ main() {
     expect(memcache.removeAll(['A', [65]]), throwsA(isArgumentError));
   });
 
+  test('increment', () {
+    var testData = [];
+    var keys = ['A', [65]];
+    var deltas = [0, 2, -1];
+    var initialValues = [0, 2];
+    var expected = initialValues[0];
+    for (var key in keys) {
+      for (var delta in deltas) {
+        for (var initialValue in initialValues) {
+          expected += delta;  // This requires the first delta to be 0.
+          testData.add(new IncrementDecrementTestData(
+              key, delta, initialValue, expected));
+        }
+      }
+    }
+
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+
+    var count = 0;
+    var value;
+
+    mock.registerIncrement(expectAsync((batch) {
+      expect(batch.length, 1);
+      expect(batch[0].key, [65]);
+      if (testData[count].delta >= 0) {
+        expect(batch[0].direction, raw.IncrementOperation.INCREMENT);
+        expect(batch[0].delta, testData[count].delta);
+      } else {
+        expect(batch[0].direction, raw.IncrementOperation.DECREMENT);
+        expect(batch[0].delta, -testData[count].delta);
+      }
+      expect(batch[0].initialValue, testData[count].initialValue);
+      if (value == null) {
+        value = batch[0].initialValue;
+      } else {
+        if (batch[0].direction == raw.IncrementOperation.INCREMENT) {
+          value += batch[0].delta;
+        } else {
+          value -= batch[0].delta;
+        }
+      }
+      count++;
+      return new Future.value(
+          [new raw.IncrementResult(raw.Status.NO_ERROR, null, value)]);
+    }, count: testData.length));
+
+    for (var x in testData) {
+      expect(memcache.increment(x.key,
+                                delta: x.delta,
+                                initialValue: x.initialValue),
+             completion(x.expected));
+    }
+  });
+
+  test('increment-error', () {
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+
+    mock.registerIncrement(expectAsync((_) {
+      return new Future.error(new ArgumentError());
+    }));
+
+    expect(memcache.increment('A'), throwsA(isArgumentError));
+  });
+
+  test('increment-throw', () {
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+
+    mock.registerIncrement((_) {
+      throw new ArgumentError();
+    });
+
+    expect(memcache.increment('A'), throwsA(isArgumentError));
+  });
+
+  test('decrement', () {
+    var testData = [];
+    var keys = ['A', [65]];
+    var deltas = [0, 2, -1];
+    var initialValues = [100, 2];
+    var expected = initialValues[0];
+    for (var key in keys) {
+      for (var delta in deltas) {
+        for (var initialValue in initialValues) {
+          expected -= delta;  // This requires the first delta to be 0.
+          testData.add([key, delta, initialValue, expected]);
+        }
+      }
+    }
+
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+
+    var count = 0;
+    var value;
+
+    mock.registerIncrement(expectAsync((batch) {
+      expect(batch.length, 1);
+      expect(batch[0].key, [65]);
+      if (testData[count][1] > 0) {
+        expect(batch[0].direction, raw.IncrementOperation.DECREMENT);
+        expect(batch[0].delta, testData[count][1]);
+      } else {
+        expect(batch[0].direction, raw.IncrementOperation.INCREMENT);
+        expect(batch[0].delta, -testData[count][1]);
+      }
+      expect(batch[0].initialValue, testData[count][2]);
+      if (value == null) {
+        value = batch[0].initialValue;
+      } else {
+        if (batch[0].direction == raw.IncrementOperation.INCREMENT) {
+          value += batch[0].delta;
+        } else {
+          value -= batch[0].delta;
+        }
+      }
+      count++;
+      return new Future.value(
+          [new raw.IncrementResult(raw.Status.NO_ERROR, null, value)]);
+    }, count: testData.length));
+
+    for (var x in testData) {
+      expect(memcache.decrement(x[0], delta: x[1], initialValue: x[2]),
+             completion(x[3]));
+    }
+  });
+
+  test('decrement-error', () {
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+
+    mock.registerIncrement(expectAsync((_) {
+      return new Future.error(new ArgumentError());
+    }));
+
+    expect(memcache.decrement('A'), throwsA(isArgumentError));
+  });
+
+  test('decrement-throw', () {
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+
+    mock.registerIncrement((_) {
+      throw new ArgumentError();
+    });
+
+    expect(memcache.decrement('A'), throwsA(isArgumentError));
+  });
+
   test('clear', () {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
@@ -339,5 +502,21 @@ main() {
     });
 
     expect(memcache.clear(), throwsA(isArgumentError));
+  });
+
+  test('to-string', () {
+    expect(new raw.GetOperation([65]).toString(), isNotNull);
+    expect(new raw.GetResult(
+        raw.Status.NO_ERROR, null, 0, null, [1]).toString(), isNotNull);
+    expect(new raw.SetOperation(
+        raw.SetOperation.SET,[65], 0, null, [1]).toString(), isNotNull);
+    expect(new raw.SetResult(raw.Status.NO_ERROR, null).toString(), isNotNull);
+    expect(new raw.RemoveOperation([65]).toString(), isNotNull);
+    expect(new raw.RemoveResult(
+        raw.Status.NO_ERROR, null).toString(), isNotNull);
+    expect(new raw.IncrementOperation(
+        [65], 1, raw.IncrementOperation.INCREMENT, 0, 0).toString(), isNotNull);
+    expect(new raw.IncrementResult(
+        raw.Status.NO_ERROR, null, 1).toString(), isNotNull);
   });
 }

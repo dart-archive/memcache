@@ -10,6 +10,7 @@ class MockRawMemcache implements RawMemcache {
   Function _handleGet;
   Function _handleSet;
   Function _handleRemove;
+  Function _handleIncrement;
   Function _handleClear;
 
   // Create a raw memcache mock with the given map as content.
@@ -31,6 +32,10 @@ class MockRawMemcache implements RawMemcache {
     _handleClear = handler;
   }
 
+  void registerIncrement(Function handler) {
+    _handleIncrement = handler;
+  }
+
   Future<List<GetResult>> get(List<GetOperation> batch) {
     if (_handleGet != null) {
       return _handleGet(batch);
@@ -48,6 +53,13 @@ class MockRawMemcache implements RawMemcache {
   Future<List<RemoveResult>> remove(List<RemoveOperation> batch) {
     if (_handleRemove != null) {
       return _handleRemove(batch);
+    }
+    throw 'Unexpected memcache remove';
+  }
+
+  Future<List<IncrementResult>> increment(List<IncrementOperation> batch) {
+    if (_handleIncrement != null) {
+      return _handleIncrement(batch);
     }
     throw 'Unexpected memcache remove';
   }
