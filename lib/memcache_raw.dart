@@ -19,7 +19,7 @@ class Status {
 
   int get hashCode => _status.hashCode;
 
-  String toString() => 'ResponseStatus($_name)';
+  String toString() => 'Status($_name)';
 }
 
 /**
