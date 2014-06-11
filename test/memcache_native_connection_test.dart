@@ -29,7 +29,7 @@ class Memcached {
           '${tempDir.path}${Platform.pathSeparator}memcached_port';
       Process.start(
           "/usr/bin/memcached",
-          ['-vvv', '-l', 'localhost', '-p', '-1', '-U', '0'],
+          ['-vvv', '-l', '127.0.0.1', '-p', '-1', '-U', '0'],
           environment: {'MEMCACHED_PORT_FILENAME': portFileName})
         .then((process) {
           var memcached = new Memcached._(process);
@@ -99,13 +99,20 @@ main() {
     }
   }
 
+  checkUint64Value(response, int value) {
+    var bytes = new Uint8List(8);
+    var data = new ByteData.view(bytes.buffer);
+    data.setUint64(0, value, Endianness.BIG_ENDIAN);
+    expect(response.value, bytes);
+  }
+
   group('memcache', () {
     setUp(startMemcached);
     tearDown(stopMemcached);
 
     Future testGetUpdateGet(Request getRequest, Request updateRequest) {
       return MemCacheNativeConnection.connect(
-          "localhost", memcached.port).then((connection) {
+          "127.0.0.1", memcached.port).then((connection) {
         return connection.sendRequest(getRequest).then((response) {
           expect(response.status, ResponseStatus.KEY_NOT_FOUND);
           expect(response.opcode, getRequest.opcode);
@@ -147,7 +154,7 @@ main() {
       };
 
       return MemCacheNativeConnection.connect(
-          "localhost", memcached.port).then((conn) {
+          "127.0.0.1", memcached.port).then((conn) {
         connection = conn;
         return connection.sendRequest(add).then((response) {
           expect(response.status, ResponseStatus.NO_ERROR);
@@ -192,7 +199,7 @@ main() {
       var add = new Request.add([1], [1]);
       var getq = new Request.getq([1]);
       return MemCacheNativeConnection.connect(
-          "localhost", memcached.port).then((connection) {
+          "127.0.0.1", memcached.port).then((connection) {
         return connection.sendRequest(add).then((response) {
           expect(response.status, ResponseStatus.STATUS_NO_ERROR);
           expect(response.opcode, add.opcode);
@@ -208,7 +215,7 @@ main() {
     test('add-add', () {
       var request = new Request.add([1], [1]);
       return MemCacheNativeConnection.connect(
-          "localhost", memcached.port).then((connection) {
+          "127.0.0.1", memcached.port).then((connection) {
         return connection.sendRequest(request).then((response) {
           expect(response.status, ResponseStatus.NO_ERROR);
           expect(response.opcode, request.opcode);
@@ -225,7 +232,7 @@ main() {
       var replace = new Request.replace([1], [2]);
       var get = new Request.get([1]);
       return MemCacheNativeConnection.connect(
-          "localhost", memcached.port).then((connection) {
+          "127.0.0.1", memcached.port).then((connection) {
         return connection.sendRequest(replace).then((response) {
           expect(response.status, ResponseStatus.KEY_NOT_FOUND);
           expect(response.opcode, replace.opcode);
@@ -251,7 +258,7 @@ main() {
       var get = new Request.get([1]);
       var delete = new Request.delete([1]);
       return MemCacheNativeConnection.connect(
-          "localhost", memcached.port).then((connection) {
+          "127.0.0.1", memcached.port).then((connection) {
         return connection.sendRequest(add).then((response) {
           expect(response.status, ResponseStatus.NO_ERROR);
           expect(response.opcode, add.opcode);
@@ -282,7 +289,7 @@ main() {
 
     test('version', () {
       return MemCacheNativeConnection.connect(
-          "localhost", memcached.port).then((connection) {
+          "127.0.0.1", memcached.port).then((connection) {
         return connection.sendRequest(new Request.version()).then((response) {
           expect(response.valueAsString.contains('.'), isTrue);
         });
@@ -294,7 +301,7 @@ main() {
       var invalidKey = new Uint8List(251);
       var get = new Request.get(invalidKey);
       return MemCacheNativeConnection.connect(
-          "localhost", memcached.port).then((connection) {
+          "127.0.0.1", memcached.port).then((connection) {
 
         Future testError(Request request, int expectedError) {
           return connection.sendRequest(get).then((response) {
@@ -304,6 +311,98 @@ main() {
 
         return testError(new Request.get(invalidKey),
                          ResponseStatus.INVALID_ARGUMENTS);
+      });
+    });
+
+    test('increment', () {
+      var incr = new Request.increment([1], 1, 0);
+      var incr2 = new Request.increment([1], 0xffffffffffffffff, 0);
+      return MemCacheNativeConnection.connect(
+          "127.0.0.1", memcached.port).then((connection) {
+        return connection.sendRequest(incr).then((response) {
+          expect(response.status, ResponseStatus.NO_ERROR);
+          expect(response.opcode, incr.opcode);
+          checkUint64Value(response, 0);
+          return connection.sendRequest(incr).then((response) {
+            expect(response.status, ResponseStatus.NO_ERROR);
+            expect(response.opcode, incr.opcode);
+            checkUint64Value(response, 1);
+            return connection.sendRequest(incr).then((response) {
+              expect(response.status, ResponseStatus.NO_ERROR);
+              expect(response.opcode, incr.opcode);
+              checkUint64Value(response, 2);
+              return connection.sendRequest(incr2).then((response) {
+                expect(response.status, ResponseStatus.NO_ERROR);
+                expect(response.opcode, incr.opcode);
+                checkUint64Value(response, 1);
+              });
+            });
+          });
+        });
+      });
+    });
+
+    test('decrement', () {
+      var decr = new Request.decrement([1], 1, 10);
+      var decr2 = new Request.decrement([1], 0xffffffffffffffffffff, 10);
+      return MemCacheNativeConnection.connect(
+          "127.0.0.1", memcached.port).then((connection) {
+        return connection.sendRequest(decr).then((response) {
+          expect(response.status, ResponseStatus.NO_ERROR);
+          expect(response.opcode, decr.opcode);
+          checkUint64Value(response, 10);
+          return connection.sendRequest(decr).then((response) {
+            expect(response.status, ResponseStatus.NO_ERROR);
+            expect(response.opcode, decr.opcode);
+            checkUint64Value(response, 9);
+            return connection.sendRequest(decr).then((response) {
+              expect(response.status, ResponseStatus.NO_ERROR);
+              expect(response.opcode, decr.opcode);
+              checkUint64Value(response, 8);
+              return connection.sendRequest(decr2).then((response) {
+                expect(response.status, ResponseStatus.NO_ERROR);
+                expect(response.opcode, decr.opcode);
+                checkUint64Value(response, 0);
+              });
+            });
+          });
+        });
+      });
+    });
+
+    test('incr-decr-no-initial', () {
+      // The an expiration with all 1-bits signals that a default value
+      // should not be set.
+      var incr = new Request.increment([1], 1, 0, expiration: 0xffffffff);
+      var decr = new Request.increment([1], 1, 0, expiration: 0xffffffff);
+      return MemCacheNativeConnection.connect(
+          "127.0.0.1", memcached.port).then((connection) {
+        return connection.sendRequest(incr).then((response) {
+          expect(response.status, ResponseStatus.KEY_NOT_FOUND);
+          expect(response.opcode, incr.opcode);
+          return connection.sendRequest(decr).then((response) {
+            expect(response.status, ResponseStatus.KEY_NOT_FOUND);
+            expect(response.opcode, decr.opcode);
+          });
+        });
+      });
+    });
+
+    test('set-incr', () {
+      // Use string number representation for setting.
+      var set = new Request.set([1], '42'.codeUnits);
+      var incr = new Request.increment([1], 1, 0);
+      return MemCacheNativeConnection.connect(
+          "127.0.0.1", memcached.port).then((connection) {
+        return connection.sendRequest(set).then((response) {
+          expect(response.status, ResponseStatus.NO_ERROR);
+          expect(response.opcode, set.opcode);
+          return connection.sendRequest(incr).then((response) {
+            expect(response.status, ResponseStatus.NO_ERROR);
+            expect(response.opcode, incr.opcode);
+            checkUint64Value(response, 43);
+          });
+        });
       });
     });
   });

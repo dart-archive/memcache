@@ -252,16 +252,40 @@ class Request extends Header {
        4| Expiration                                                    |
         +---------------+---------------+---------------+---------------+
       Total 8 bytes
+
+  Extra data for incr/decr
+
+       Byte/     0       |       1       |       2       |       3       |
+          /              |               |               |               |
+         |0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|
+         +---------------+---------------+---------------+---------------+
+        0| Amount to add / subtract                                      |
+         |                                                               |
+         +---------------+---------------+---------------+---------------+
+        8| Initial value                                                 |
+         |                                                               |
+         +---------------+---------------+---------------+---------------+
+       16| Expiration                                                    |
+         +---------------+---------------+---------------+---------------+
+         Total 20 bytes
+
   */
+
   static final int HEADER_LEN = 24;
   static final int FLAGS_OFFSET = HEADER_LEN;
   static final int EXPIRATION_OFFSET = HEADER_LEN + 4;
+
+  static final int DELTA_OFFSET = HEADER_LEN;
+  static final int INITIAL_VALUE_OFFSET = HEADER_LEN + 8;
+  static final int INCREMENT_EXPIRATION_OFFSET = HEADER_LEN + 16;
 
   static final int GET_EXTRAS_LENGTH = 0;
   static final int SET_EXTRAS_LENGTH = 8;  // Flags and expiration.
   static final int ADD_EXTRAS_LENGTH = 8;  // Flags and expiration.
   static final int REPLACE_EXTRAS_LENGTH = 8;  // Flags and expiration.
   static final int DELETE_EXTRAS_LENGTH = 0;
+  // Delta, initial and expiration.
+  static final int INCREMENT_EXTRAS_LENGTH = 20;
 
   Request(int opcode, int extrasLen,
           List<int> key, List<int> value, [int cas = 0])
@@ -359,6 +383,30 @@ class Request extends Header {
     return request;
   }
 
+  factory Request.increment(
+      List<int> key, int delta, int initialValue, {int expiration: 0}) {
+    return new Request._incrDecr(
+        Opcode.OPCODE_INCREMENT, key, delta, initialValue, expiration);
+  }
+
+  factory Request.decrement(
+      List<int> key, int delta, int initialValue, {int expiration: 0}) {
+    return new Request._incrDecr(
+        Opcode.OPCODE_DECREMENT, key, delta, initialValue, expiration);
+  }
+
+  factory Request._incrDecr(int opcode,
+      List<int> key, int delta, int initialValue, int expiration) {
+    var request = new Request(
+        opcode, INCREMENT_EXTRAS_LENGTH, key, null);
+    request.data.setUint64(DELTA_OFFSET, delta, Endianness.BIG_ENDIAN);
+    request.data.setUint64(
+        INITIAL_VALUE_OFFSET, initialValue, Endianness.BIG_ENDIAN);
+    request.data.setUint32(
+        INCREMENT_EXPIRATION_OFFSET, expiration, Endianness.BIG_ENDIAN);
+    return request;
+  }
+
   factory Request.version() {
     return new Request(Opcode.OPCODE_VERSION, 0, null, null);
   }
@@ -416,9 +464,22 @@ class Response extends Header {
        0| Flags                                                         |
         +---------------+---------------+---------------+---------------+
         Total 4 bytes
+
+  Value for increment/decrement response:
+
+      Byte/     0       |       1       |       2       |       3       |
+         /              |               |               |               |
+        |0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|
+        +---------------+---------------+---------------+---------------+
+       0| 64-bit unsigned response.                                     |
+        |                                                               |
+        +---------------+---------------+---------------+---------------+
+        Total 8 bytes
   */
+
   static const int HEADER_LEN = 24;
   static const int FLAGS_OFFSET = HEADER_LEN;
+  static const int INCREMENT_VALUE_OFFSET = HEADER_LEN;
 
   Response(Uint8List header): super(header);
 
@@ -434,6 +495,15 @@ class Response extends Header {
       return data.getUint32(FLAGS_OFFSET, Endianness.BIG_ENDIAN);
     } else {
       throw new MemCacheError('Request for $opcode does not contain flags');
+    }
+  }
+
+  int get incrDecrValue {
+    if (extrasLength >= 8) {
+      return data.getUint64(INCREMENT_VALUE_OFFSET, Endianness.BIG_ENDIAN);
+    } else {
+      throw new MemCacheError('Request for $opcode does not contain '
+                              'incremented/decremented value');
     }
   }
 
