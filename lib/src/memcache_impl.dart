@@ -212,6 +212,10 @@ class MemCacheImpl implements Memcache {
                 // If one element is not stored throw NotStored.
                 throw const NotStoredError();
               }
+              if (result.status == raw.Status.KEY_EXISTS) {
+                // If one element is modified throw Modified.
+                throw const ModifiedError();
+              }
               // If one element has another status throw.
               throw new MemcacheError(result.status, 'Error storing item');
             });

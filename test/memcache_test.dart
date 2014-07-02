@@ -13,6 +13,13 @@ import '../lib/src/memcache_impl.dart';
 import 'mock_raw_memcache.dart';
 
 
+class _MemcacheModifiedError extends TypeMatcher {
+  const _MemcacheModifiedError() : super("ModifiedError");
+  bool matches(item, Map matchState) => item is ModifiedError;
+}
+
+const isMemcacheModifiedError = const _MemcacheModifiedError();
+
 class IncrementDecrementTestData {
   final key;
   final delta;
@@ -573,6 +580,22 @@ main() {
       });
     });
 
+    test('get-set-modified', () {
+      var exists = new raw.SetResult(raw.Status.KEY_EXISTS, null);
+
+      return memcache.get([65]).then((value) {
+        expect(value, 'B');
+        mock.registerGet(null);
+        mock.registerSet(expectAsync((batch) {
+          check(batch);
+          return new Future.value([exists]);
+        }, count: 2));
+
+        expect(memcache.set([65], [66]), throwsA(isMemcacheModifiedError));
+        expect(memcache.set('A', [66]), throwsA(isMemcacheModifiedError));
+      });
+    });
+
     test('get-add', () {
       return memcache.get([65]).then((value) {
         expect(value, 'B');
@@ -657,6 +680,21 @@ main() {
         return memcache.setAll({key1: 'C', 'B': [68]}).then((value) {
           expect(value, isNull);
         });
+      });
+    });
+
+    test('get-all-set-all-modified', () {
+      var exists = new raw.SetResult(raw.Status.KEY_EXISTS, null);
+
+      return memcache.getAll([key1, "B"]).then((values) {
+        expect(values.length, 2);
+        mock.registerGet(null);
+        mock.registerSet(expectAsync((batch) {
+          check(batch);
+          return new Future.value([ok, exists]);
+        }));
+        expect(memcache.setAll({key1: 'C', 'B': [68]}),
+               throwsA(isMemcacheModifiedError));
       });
     });
 

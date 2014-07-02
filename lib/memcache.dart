@@ -122,10 +122,11 @@ abstract class Memcache {
   /**
    * Sets multiple values in memcache.
    *
-   * The value passed can have type `String`, `List<int>` or `Value`
+   * The keys and values passed in `keysAndValues` can have type `String`
+   * or `List<int>`.
    *
    *     Memcache m = ...;
-   *     m.setMultiple(
+   *     m.setAll(
    *         {'mykey': 'myvalue',
    *          [0, 1, 2]: [3, 4, 5]
    *         });
@@ -137,6 +138,9 @@ abstract class Memcache {
    *
    * Note that memcache is not transactional, so if this operation fails some
    * of the updates might still have succeeded.
+   *
+   * Also note that when this operation fails the exception reported is the
+   * first failure encountered. There might be different failures as well.
    */
   Future setAll(Map keysAndValues,
                 {Duration expiration, SetAction action: SetAction.SET});
