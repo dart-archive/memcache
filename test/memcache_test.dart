@@ -12,6 +12,7 @@ import '../lib/src/memcache_impl.dart';
 
 import 'mock_raw_memcache.dart';
 
+
 class IncrementDecrementTestData {
   final key;
   final delta;
@@ -518,5 +519,247 @@ main() {
         [65], 1, raw.IncrementOperation.INCREMENT, 0, 0).toString(), isNotNull);
     expect(new raw.IncrementResult(
         raw.Status.NO_ERROR, null, 1).toString(), isNotNull);
+  });
+
+  group('memcache-with-cas', () {
+    var mock;
+    var memcache;
+    var cas = 0xCA5;
+    var result = new raw.GetResult(
+        raw.Status.NO_ERROR, null, 0, cas, [66]);
+
+    setUp(() {
+      mock = new MockRawMemcache();
+      memcache = new MemCacheImpl(mock).withCAS();
+
+      mock.registerGet(expectAsync((batch) {
+        expect(batch.length, 1);
+        expect(batch[0].key, [65]);
+        return new Future.value([result]);
+      }));
+    });
+
+    tearDown((){
+      mock = null;
+      memcache = null;
+    });
+
+    check(batch, [operation = raw.SetOperation.SET]) {
+      expect(batch.length, 1);
+      expect(batch[0].operation, operation);
+      expect(batch[0].key, [65]);
+      expect(batch[0].value, [66]);
+      if (operation == raw.SetOperation.SET) {
+        expect(batch[0].cas, cas);
+      } else {
+        expect(batch[0].cas, isNull);
+      }
+    }
+
+    test('get-set', () {
+      return memcache.get([65]).then((value) {
+        expect(value, 'B');
+        mock.registerGet(null);
+        mock.registerSet(expectAsync((batch) {
+          check(batch);
+          return new Future.value([ok]);
+        }, count: 2));
+        return memcache.set([65], [66]).then((value) {
+          expect(value, isNull);
+          return memcache.set('A', [66]).then((value) {
+            expect(value, isNull);
+          });
+        });
+      });
+    });
+
+    test('get-add', () {
+      return memcache.get([65]).then((value) {
+        expect(value, 'B');
+        mock.registerGet(null);
+        mock.registerSet(expectAsync((batch) {
+          check(batch, raw.SetOperation.ADD);
+          return new Future.value([ok]);
+        }));
+        return memcache.set([65], [66], action: SetAction.ADD).then((value) {
+          expect(value, isNull);
+        });
+      });
+    });
+
+    test('get-replace', () {
+      return memcache.get([65]).then((value) {
+        expect(value, 'B');
+        mock.registerGet(null);
+        mock.registerSet(expectAsync((batch) {
+          check(batch, raw.SetOperation.REPLACE);
+          return new Future.value([ok]);
+        }));
+        return memcache.set([65], [66],
+                            action: SetAction.REPLACE).then((value) {
+          expect(value, isNull);
+        });
+      });
+    });
+  });
+
+  group('memcache-with-cas-all', () {
+    var mock;
+    var memcache;
+    var key1 = [65];
+    var casA = 0xCA5;
+    var casB = 0xCA2;
+    var result =
+        [ new raw.GetResult(raw.Status.NO_ERROR, null, 0, casA, [67]),
+          new raw.GetResult(raw.Status.NO_ERROR, null, 0, casB, [68]) ];
+
+    setUp(() {
+      mock = new MockRawMemcache();
+      memcache = new MemCacheImpl(mock).withCAS();
+
+      mock.registerGet(expectAsync((batch) {
+        expect(batch.length, 2);
+        expect(batch[0].key, key1);
+        expect(batch[1].key, [66]);
+        return new Future.value(result);
+      }));
+    });
+
+    tearDown((){
+      mock = null;
+      memcache = null;
+    });
+
+    check(batch, [operation = raw.SetOperation.SET]) {
+      expect(batch.length, 2);
+      expect(batch[0].operation, operation);
+      expect(batch[0].key, [65]);
+      expect(batch[0].value, [67]);
+      expect(batch[1].key, [66]);
+      expect(batch[1].value, [68]);
+      if (operation == raw.SetOperation.SET) {
+        expect(batch[0].cas, casA);
+        expect(batch[1].cas, casB);
+      } else {
+        expect(batch[0].cas, isNull);
+        expect(batch[1].cas, isNull);
+      }
+    }
+
+    test('get-all-set-all', () {
+      return memcache.getAll([key1, "B"]).then((values) {
+        expect(values.length, 2);
+        mock.registerGet(null);
+        mock.registerSet(expectAsync((batch) {
+          check(batch);
+          return new Future.value([ok, ok]);
+        }));
+        return memcache.setAll({key1: 'C', 'B': [68]}).then((value) {
+          expect(value, isNull);
+        });
+      });
+    });
+
+    test('get-all-add-all', () {
+      return memcache.getAll([key1, "B"]).then((values) {
+        expect(values.length, 2);
+        mock.registerGet(null);
+        mock.registerSet(expectAsync((batch) {
+          check(batch, raw.SetOperation.ADD);
+          return new Future.value([ok, ok]);
+        }));
+        return memcache.setAll({key1: 'C', 'B': [68]},
+                               action: SetAction.ADD).then((value) {
+          expect(value, isNull);
+        });
+      });
+    });
+
+    test('get-all-replace-all', () {
+      return memcache.getAll([key1, "B"]).then((values) {
+        expect(values.length, 2);
+        mock.registerGet(null);
+        mock.registerSet(expectAsync((batch) {
+          check(batch, raw.SetOperation.REPLACE);
+          return new Future.value([ok, ok]);
+        }));
+        return memcache.setAll({key1: 'C', 'B': [68]},
+                               action: SetAction.REPLACE).then((value) {
+          expect(value, isNull);
+        });
+      });
+    });
+  });
+
+  group('memcache-dont-modify-arguments', () {
+    var mock;
+    var memcache;
+    var result = new raw.GetResult(raw.Status.NO_ERROR, null, 0, null, [68]);
+
+    setUp(() {
+      mock = new MockRawMemcache();
+      memcache = new MemCacheImpl(mock);
+    });
+
+    tearDown((){
+      mock = null;
+      memcache = null;
+    });
+
+    test('get-all', () {
+      mock.registerGet(expectAsync((batch) {
+        expect(batch.length, 2);
+        expect(batch[0].key, [65]);
+        expect(batch[1].key, [66]);
+        return new Future.value([result, result]);
+      }));
+
+      var key1 = [65];
+      var key2 = 'B';
+      var keys = [key1, key2];
+      return memcache.getAll(keys).then((_) {
+        expect(keys[0] == key1, isTrue);
+        expect(keys[1] == key2, isTrue);
+      });
+    });
+
+    test('set-all', () {
+      mock.registerSet(expectAsync((batch) {
+        expect(batch.length, 2);
+        expect(batch[0].key, [65]);
+        expect(batch[1].key, [66]);
+        return new Future.value([ok, ok]);
+      }));
+
+      var key1 = [65];
+      var key2 = 'B';
+      var value1 = 'A';
+      var value2 = [66];
+      var map = {key1: value1, key2: value2};
+      return memcache.setAll(map).then((_) {
+        var keys = map.keys.toList();
+        expect(keys[0] == key1, isTrue);
+        expect(keys[1] == key2, isTrue);
+        expect(map[key1] == value1, isTrue);
+        expect(map[key2] == value2, isTrue);
+      });
+    });
+
+    test('remove-all', () {
+      mock.registerRemove(expectAsync((batch) {
+        expect(batch.length, 2);
+        expect(batch[0].key, [65]);
+        expect(batch[1].key, [66]);
+        return new Future.value([result, result]);
+      }));
+
+      var key1 = [65];
+      var key2 = 'B';
+      var keys = [key1, key2];
+      return memcache.removeAll(keys).then((_) {
+        expect(keys[0] == key1, isTrue);
+        expect(keys[1] == key2, isTrue);
+      });
+    });
   });
 }

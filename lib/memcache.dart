@@ -25,12 +25,19 @@ class MemcacheError implements Exception {
 }
 
 /**
- * Exception thrown by [Memcache.set] if the item was not stored.
+ * Exception thrown by [Memcache.set] and [Memcache.setAll] if the item was
+ * not stored.
  */
 class NotStoredError extends MemcacheError {
   const NotStoredError() : super(null, 'Item was not stored.');
+}
 
-  String toString() => 'Item was not stored.';
+/**
+ * Exception thrown by [Memcache.set] and [Memcache.setAll] if CAS tracking
+ * is used and the item has been modified after it was fetched.
+ */
+class ModifiedError extends MemcacheError {
+  const ModifiedError() : super(null, 'Item exists with a different CAS value.');
 }
 
 /**
@@ -185,6 +192,29 @@ abstract class Memcache {
    * duration has passed.
    */
   Future clear({Duration expiration});
+
+  /**
+   * Returns a new instance of `Memcache` which keeps track of the
+   * Data Version Check, also called 'Compare And Set' (CAS).
+   *
+   * When using this instance each `get` and `getAll` operation will retreive
+   * the CAS value and keep track of that.
+   *
+   * When a `set` or `setAll` operation is performed, the CAS value retrieved
+   * from the `get` or `getAll` operation will be used, to ensure that setting
+   * a value only happens if the value has not been modified since it was
+   * retreived.
+   *
+   * The CAS check is only in effect when `set` or `setAll` uses the action
+   * `SetAction.SET`. This is the default action.
+   *
+   * For the other operations `remove`, `increment` and `decrement` the CAS
+   * value is not used and these operations will be preformed unconditialally.
+   *
+   * NOTE: There is no way of clearing the tracked CAS values. Just create a
+   * new `withCAS` instance when needed.
+   */
+  Memcache withCAS();
 }
 
 class SetAction {

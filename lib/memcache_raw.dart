@@ -45,7 +45,7 @@ class GetResult {
   final Status status;
   final String message;
   final int flags;
-  final List<int> cas;
+  final int cas;
   final List<int> value;
 
   GetResult(this.status, this.message, this.flags, this.cas, this.value);
@@ -64,7 +64,7 @@ class SetOperation {
   final int operation;
   final List<int> key;
   final int flags;
-  final List<int> cas;
+  final int cas;
   final List<int> value;
 
   SetOperation(this.operation, this.key, this.flags, this.cas, this.value);
