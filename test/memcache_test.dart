@@ -95,6 +95,32 @@ main() {
     expect(memcache.get('A'), throwsA(isArgumentError));
   });
 
+  test('get-all', () {
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+    var keyA = [65];
+    var keyCD = [67, 68];
+    var keys = [keyA, keyCD];
+
+    var foundA = new raw.GetResult(
+        raw.Status.NO_ERROR, null, 0, null, [66]);
+    var foundCD = new raw.GetResult(
+        raw.Status.NO_ERROR, null, 0, null, [69, 70]);
+    mock.registerGet(expectAsync((batch) {
+      expect(batch.length, keys.length);
+      for (var i = 0; i < keys.length; i++) {
+        expect(batch[i].key, keys[i]);
+      }
+      return new Future.value([foundA, foundCD]);
+    }, count: 4));
+
+    expect(memcache.getAll(['A', 'CD']), completion({'A': 'B', 'CD': 'EF'}));
+    expect(memcache.getAll([keyA, 'CD']), completion({keyA: 'B', 'CD': 'EF'}));
+    expect(memcache.getAll(['A', keyCD]), completion({'A': 'B', keyCD: 'EF'}));
+    expect(memcache.getAll([keyA, keyCD]),
+                            completion({keyA: 'B', keyCD: 'EF'}));
+  });
+
   test('get-all-throws', () {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);

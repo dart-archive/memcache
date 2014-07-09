@@ -143,10 +143,11 @@ class MemCacheImpl implements Memcache {
     return new Future.sync(() {
       // Copy the keys as they might get mutated by _createKey below.
       var keysList = keys.toList();
+      var binaryKeys = new List(keysList.length);
       var request = new List(keysList.length);
       for (int i = 0; i < keysList.length; i++) {
-        keysList[i] = _createKey(keysList[i]);
-        request[i] = _createGetOperation(keysList[i]);
+        binaryKeys[i] = _createKey(keysList[i]);
+        request[i] = _createGetOperation(binaryKeys[i]);
       }
       return _raw.get(request).then((List<raw.GetResult> response) {
         if (response.length != request.length) {
@@ -161,7 +162,7 @@ class MemCacheImpl implements Memcache {
             value =
                 asBinary ? response[i].value : UTF8.decode(response[i].value);
             if (_withCas) {
-              _addCas(keysList[i], response[i].cas);
+              _addCas(binaryKeys[i], response[i].cas);
             }
           }
           result[keysList[i]] = value;
