@@ -1,5 +1,7 @@
 name: memcache
 version: 0.1.0
-author: Dart Team
+author: Dart Team <misc@dartlang.org>
+description: Dart memcache APIs
+homepage: http://www.dartlang.org
 dev_dependencies:
   unittest: '>=0.11.0 <0.12.0'
