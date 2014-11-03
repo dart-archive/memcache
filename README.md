@@ -1,4 +1,4 @@
-## Memcache interface
+## Memcache interface for the `appengine` package.
 
 This package define Dart interfaces for memcache. The package defines both
 a high-level interface and a low-level interface.
