@@ -1,5 +1,5 @@
 name: memcache
-version: 0.1.0
+version: 0.2.0
 author: Dart Team <misc@dartlang.org>
 description: Dart memcache APIs
 homepage: http://www.dartlang.org

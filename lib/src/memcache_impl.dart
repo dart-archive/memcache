@@ -82,12 +82,20 @@ class MemCacheImpl implements Memcache {
     return value;
   }
 
+  void _checkExpiration(Duration expiration) {
+    const int secondsInThirtyDays = 60 * 60 * 24 * 30;
+    // Expiration cannot exceed 30 days.
+    if (expiration != null && expiration.inSeconds > secondsInThirtyDays) {
+      throw new ArgumentError('Expiration cannot exceed 30 days');
+    }
+  }
+
   raw.GetOperation _createGetOperation(List<int> key) {
     return new raw.GetOperation(key);
   }
 
   raw.SetOperation _createSetOperation(
-      Object key, Object value, SetAction action) {
+      Object key, Object value, SetAction action, Duration expiration) {
     var operation;
     var cas;
     switch (action) {
@@ -99,7 +107,9 @@ class MemCacheImpl implements Memcache {
       case SetAction.REPLACE: operation = raw.SetOperation.REPLACE; break;
       default: throw new ArgumentError('Unsupported set action $action');
     }
-    return new raw.SetOperation(operation, key, 0, cas, _createValue(value));
+    var exp = expiration != null ? expiration.inSeconds : 0;
+    return new raw.SetOperation(
+        operation, key, 0, cas, _createValue(value), exp);
   }
 
   raw.RemoveOperation _createRemoveOperation(Object key) {
@@ -174,33 +184,36 @@ class MemCacheImpl implements Memcache {
 
   Future set(key, value,
              {Duration expiration, SetAction action: SetAction.SET}) {
-    key = _createKey(key);
-    return new Future.sync(
-        () => _raw.set([_createSetOperation(key, value, action)]))
-        .then((List<raw.SetResult> response) {
-          if (response.length != 1) {
-            // TODO(sgjesse): Improve error.
-            throw const MemcacheError.internalError();
-          }
-          var result = response.first;
-          if (result.status == raw.Status.NO_ERROR) return null;
-          if (result.status == raw.Status.NOT_STORED) {
-            throw const NotStoredError();
-          }
-          if (result.status == raw.Status.KEY_EXISTS) {
-            throw const ModifiedError();
-          }
-          throw new MemcacheError(result.status, 'Error storing item');
-        });
+    return new Future.sync(() {
+      _checkExpiration(expiration);
+      key = _createKey(key);
+      return _raw.set([_createSetOperation(key, value, action, expiration)])
+          .then((List<raw.SetResult> response) {
+            if (response.length != 1) {
+              // TODO(sgjesse): Improve error.
+              throw const MemcacheError.internalError();
+            }
+            var result = response.first;
+            if (result.status == raw.Status.NO_ERROR) return null;
+            if (result.status == raw.Status.NOT_STORED) {
+              throw const NotStoredError();
+            }
+            if (result.status == raw.Status.KEY_EXISTS) {
+              throw const ModifiedError();
+            }
+            throw new MemcacheError(result.status, 'Error storing item');
+          });
+    });
   }
 
   Future setAll(Map keysAndValues,
                 {Duration expiration, SetAction action: SetAction.SET}) {
     return new Future.sync(() {
+      _checkExpiration(expiration);
       var request = [];
       keysAndValues.forEach((key, value) {
         key = _createKey(key);
-        request.add(_createSetOperation(key, value, action));
+        request.add(_createSetOperation(key, value, action, expiration));
       });
       return _raw.set(request)
           .then((List<raw.SetResult> response) {
@@ -273,7 +286,7 @@ class MemCacheImpl implements Memcache {
     return increment(key, delta: -delta, initialValue: initialValue);
   }
 
-  Future clear({Duration expiration}) {
+  Future clear() {
     return new Future.sync(() => _raw.clear());
   }
 

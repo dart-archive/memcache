@@ -66,12 +66,24 @@ class SetOperation {
   final int flags;
   final int cas;
   final List<int> value;
+  // Expiration time in seconds. If this value is less than the number of
+  // seconds in 30 days (60 * 60 * 24 * 30) the expiration is relative to the
+  // current time. If the value is higher than the number of seconds in 30 days
+  // the expiration is absolute as seconds since the epoc.
+  //
+  // See https://github.com/memcached/memcached/blob/master/doc/protocol.txt.
+  final int expiration;
 
-  SetOperation(this.operation, this.key, this.flags, this.cas, this.value);
+  SetOperation(this.operation,
+               this.key,
+               this.flags,
+               this.cas,
+               this.value,
+               this.expiration);
 
   String toString() =>
       'SetOperation(operation: $operation, key: $key, flags: $flags, '
-      'cas: $cas, value: $value)';
+      'cas: $cas, value: $value, expiration: $expiration)';
 }
 
 class SetResult {

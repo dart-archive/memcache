@@ -191,11 +191,8 @@ abstract class Memcache {
 
   /**
    * Delete all items in memcache.
-   *
-   * If [expiration] is set the flushing of the cache will happen after that
-   * duration has passed.
    */
-  Future clear({Duration expiration});
+  Future clear();
 
   /**
    * Returns a new instance of `Memcache` which keeps track of the
@@ -232,5 +229,5 @@ class SetAction {
 
   int get hashCode => _action.hashCode;
 
-  String oString() => 'SetAction($_name)';
+  String toString() => 'SetAction($_name)';
 }

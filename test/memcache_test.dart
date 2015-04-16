@@ -142,6 +142,7 @@ main() {
       expect(batch[0].operation, raw.SetOperation.SET);
       expect(batch[0].key, [65]);
       expect(batch[0].value, [66]);
+      expect(batch[0].expiration, 0);
       return new Future.value([ok]);
     }, count: 4));
 
@@ -155,18 +156,31 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerSet(expectAsync((batch) {
-      expect(batch.length, 1);
-      expect(batch[0].operation, operation);
-      expect(batch[0].key, [65]);
-      expect(batch[0].value, [66]);
-      return new Future.value([ok]);
-    }, count: 4));
+    testWithExpiration(expiration) {
+      mock.registerSet(expectAsync((batch) {
+        expect(batch.length, 1);
+        expect(batch[0].operation, operation);
+        expect(batch[0].key, [65]);
+        expect(batch[0].value, [66]);
+        expect(batch[0].expiration,
+               expiration == null ? 0 : expiration.inSeconds);
+        return new Future.value([ok]);
+      }, count: 4));
 
-    expect(memcache.set([65], [66], action: action), completion(isNull));
-    expect(memcache.set('A', [66], action: action), completion(isNull));
-    expect(memcache.set([65], 'B', action: action), completion(isNull));
-    expect(memcache.set('A', 'B', action: action), completion(isNull));
+      expect(memcache.set([65], [66], action: action, expiration: expiration),
+             completion(isNull));
+      expect(memcache.set('A', [66], action: action, expiration: expiration),
+             completion(isNull));
+      expect(memcache.set([65], 'B', action: action, expiration: expiration),
+             completion(isNull));
+      expect(memcache.set('A', 'B', action: action, expiration: expiration),
+             completion(isNull));
+    }
+
+    var expirations = [null, new Duration(hours: 1), new Duration(days: 30)];
+    for (var expiration in expirations) {
+      testWithExpiration(expiration);
+    }
   }
 
   test('set-action-set', () {
@@ -221,6 +235,10 @@ main() {
       expect(memcache.set([65], 'B', action: action), throwsA(isArgumentError));
       expect(memcache.set('A', 'B', action: action), throwsA(isArgumentError));
     }
+
+    var expiration = new Duration(days: 30, seconds: 1);
+    expect(memcache.set('A', 'B', expiration: expiration),
+           throwsA(isArgumentError));
   });
 
   var setAllMaps = [
@@ -232,12 +250,14 @@ main() {
   var setAllKeys = [[65], [67, 68]];
   var setAllValues = [[66], [69, 70]];
 
-  checkSetAllBatch(batch, operation) {
+  checkSetAllBatch(batch, operation, expiration) {
     expect(batch.length, setAllKeys.length);
     for (var i = 0; i < setAllKeys.length; i++) {
       expect(batch[i].operation, operation);
       expect(batch[i].key, setAllKeys[i]);
       expect(batch[i].value, setAllValues[i]);
+      expect(batch[i].expiration,
+             expiration == null ? 0 : expiration.inSeconds);
     }
   }
 
@@ -246,7 +266,7 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     mock.registerSet(expectAsync((batch) {
-      checkSetAllBatch(batch, raw.SetOperation.SET);
+      checkSetAllBatch(batch, raw.SetOperation.SET, null);
       return new Future.value([ok, ok]);
     }, count: setAllMaps.length));
 
@@ -259,13 +279,21 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerSet(expectAsync((batch) {
-      checkSetAllBatch(batch, operation);
-      return new Future.value([ok, ok]);
-    }, count: setAllMaps.length));
+    testWithExpiration(expiration) {
+      mock.registerSet(expectAsync((batch) {
+        checkSetAllBatch(batch, operation, expiration);
+        return new Future.value([ok, ok]);
+      }, count: setAllMaps.length));
 
-    for (var m in setAllMaps) {
-      expect(memcache.setAll(m, action: action), completes);
+      for (var m in setAllMaps) {
+        expect(memcache.setAll(
+            m, action: action, expiration: expiration), completes);
+      }
+    }
+
+    var expirations = [null, new Duration(hours: 1), new Duration(days: 30)];
+    for (var expiration in expirations) {
+      testWithExpiration(expiration);
     }
   }
 
@@ -304,7 +332,12 @@ main() {
 
     for (var m in setAllMaps) {
       expect(memcache.setAll(m), throwsA(isArgumentError));
+
+      var expiration = new Duration(days: 30, seconds: 1);
+      expect(memcache.setAll(m, expiration: expiration),
+             throwsA(isArgumentError));
     }
+
   });
 
   test('remove', () {
@@ -543,7 +576,7 @@ main() {
     expect(new raw.GetResult(
         raw.Status.NO_ERROR, null, 0, null, [1]).toString(), isNotNull);
     expect(new raw.SetOperation(
-        raw.SetOperation.SET,[65], 0, null, [1]).toString(), isNotNull);
+        raw.SetOperation.SET,[65], 0, null, [1], 0).toString(), isNotNull);
     expect(new raw.SetResult(raw.Status.NO_ERROR, null).toString(), isNotNull);
     expect(new raw.RemoveOperation([65]).toString(), isNotNull);
     expect(new raw.RemoveResult(
@@ -587,6 +620,7 @@ main() {
       } else {
         expect(batch[0].cas, isNull);
       }
+      expect(batch[0].expiration, 0);
     }
 
     test('get-set', () {
