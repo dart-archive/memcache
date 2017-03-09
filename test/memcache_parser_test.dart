@@ -6,7 +6,7 @@ import "dart:io";
 import "dart:async";
 import "dart:math" as Math;
 
-import 'package:unittest/unittest.dart';
+import 'package:test/test.dart';
 
 import 'package:memcache/src/memcache_native_connection.dart';
 

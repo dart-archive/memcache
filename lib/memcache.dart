@@ -41,6 +41,16 @@ class ModifiedError extends MemcacheError {
 }
 
 /**
+ * Exception thrown if there was a network error.
+ */
+class NetworkException extends MemcacheError {
+  final error;
+  NetworkException(this.error) : super(null, null);
+
+  String toString() => 'NetworkError: "$error"';
+}
+
+/**
  * Access to a memcache service.
  *
  * The memcache service – referred to as simply 'memcache' below – provides a

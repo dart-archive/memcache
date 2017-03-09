@@ -159,7 +159,9 @@ class Header {
   final Uint8List bytes;
   final ByteData data;
 
-  Header(Uint8List b) : bytes = b, data = new ByteData.view(b.buffer);
+  Header(Uint8List b)
+      : bytes = b,
+        data = new ByteData.view(b.buffer, b.offsetInBytes, b.lengthInBytes);
 
   int get magic => bytes[MAGIC_OFFSET];
 
@@ -217,7 +219,7 @@ class Header {
   }
 
   static int totalBodyLengthFromHeader(Uint8List header) {
-    return new ByteData.view(header.buffer).getUint32(
+    return new ByteData.view(header.buffer, header.offsetInBytes).getUint32(
         TOTAL_BODY_LENGTH_OFFSET, Endianness.BIG_ENDIAN);
   }
 }
@@ -312,6 +314,10 @@ class Request extends Header {
     if (value != null) {
       bytes.setRange(valueOffset, valueOffset + value.length, value);
     }
+  }
+
+  factory Request.flush() {
+    return new Request(Opcode.OPCODE_FLUSH, 0, null, null);
   }
 
   factory Request.get(List<int> key) {
@@ -414,7 +420,7 @@ class Request extends Header {
   int get vbucketId => vbucketIdOrStatus;
 
   int get flags {
-    // The flags aare always the first four bytes of the extras data.
+    // The flags are always the first four bytes of the extras data.
     if (extrasLength >= 4) {
       return data.getUint32(FLAGS_OFFSET, Endianness.BIG_ENDIAN);
     } else {
@@ -499,7 +505,7 @@ class Response extends Header {
   }
 
   int get incrDecrValue {
-    if (extrasLength >= 8) {
+    if (extrasLength == 0 && keyLength == 0 && totalBodyLength == 8) {
       return data.getUint64(INCREMENT_VALUE_OFFSET, Endianness.BIG_ENDIAN);
     } else {
       throw new MemCacheError('Request for $opcode does not contain '
@@ -617,8 +623,8 @@ class _ResponseTransformerSink implements EventSink<List<int>> {
           // Check for full response including body.
           if (bytes is Uint8List && (length - index) >= Response.HEADER_LEN) {
             var totalBodyLengthIndex = index + Header.TOTAL_BODY_LENGTH_OFFSET;
-            var totalBodyLength =
-                new ByteData.view(bytes.buffer, totalBodyLengthIndex, 4)
+            var totalBodyLength = new ByteData.view(
+                bytes.buffer, bytes.offsetInBytes + totalBodyLengthIndex, 4)
                     .getUint32(0, Endianness.BIG_ENDIAN);
             var totalMessageLength = Response.HEADER_LEN + totalBodyLength;
             if (length - index >= totalMessageLength) {
@@ -628,7 +634,7 @@ class _ResponseTransformerSink implements EventSink<List<int>> {
               } else {
                 var view = new Uint8List.view(
                     bytes.buffer,
-                    index,
+                    bytes.offsetInBytes + index,
                     Response.HEADER_LEN + totalBodyLength);
                 response = new Response(view);
                 checkHeader(response);
@@ -718,6 +724,8 @@ class MemCacheNativeConnection {
     });
   }
 
+  bool get isClosed => _closed;
+
   void onResponse(Response response) {
     // Check whether the corresponding request is found in the queue.
     Iterator it = _pendingRequests.iterator;
@@ -749,23 +757,11 @@ class MemCacheNativeConnection {
   }
 
   void onError(error) {
-    if (_closed) return;
-    _closed = true;
-    // When there is a communication error complete all pending requests.
-    _pendingRequests.forEach((pending) {
-      pending.completeError(error);
-    });
-    _socket.destroy();
+    close(error);
   }
 
   void onDone() {
-    if (_closed) return;
-    _closed = true;
-    // When there is a communication error complete all pending requests.
-    _pendingRequests.forEach((pending) {
-      pending.completeError(new MemCacheError("Connection closed"));
-    });
-    _socket.close();
+    close("Connection closed");
   }
 
   Future<Response> sendRequest(Request request) {
@@ -778,5 +774,17 @@ class MemCacheNativeConnection {
     _pendingRequests.add(pending);
     _socket.add(request.bytes);
     return pending.future;
+  }
+
+  Future close([String error = 'Forcefully closing connection']) async {
+    if (_closed) return;
+    _closed = true;
+
+    // When there is a communication error complete all pending requests.
+    _pendingRequests.forEach((pending) {
+      pending.completeError(new MemCacheError(error));
+    });
+
+    await _socket.close();
   }
 }

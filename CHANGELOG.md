@@ -1,3 +1,12 @@
+## 0.2.1
+
+* Added [BinaryMemcacheProtocol] which implements the [RawMemcache] API.
+
+* Fix bugs in the [MemCacheNativeConnection] which used typed-data views
+  incorrectly.
+
+* Switch from `package:unittest` to `package:test`.
+
 ## 0.2.0
 
 * Added expiration to the RawMemcache API when adding values. Pass the

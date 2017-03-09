@@ -4,7 +4,7 @@
 
 import 'dart:async';
 
-import 'package:unittest/unittest.dart';
+import 'package:test/test.dart';
 
 import '../lib/memcache.dart';
 import '../lib/memcache_raw.dart' as raw;

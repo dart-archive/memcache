@@ -7,7 +7,7 @@ import "dart:convert";
 import "dart:io";
 import "dart:typed_data";
 
-import 'package:unittest/unittest.dart';
+import 'package:test/test.dart';
 
 import 'package:memcache/src/memcache_native_connection.dart';
 
