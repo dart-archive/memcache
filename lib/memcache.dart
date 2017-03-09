@@ -6,7 +6,8 @@ library memcache;
 
 import "dart:async";
 
-import "memcache_raw.dart" show Status;
+import "memcache_raw.dart";
+import "src/memcache_impl.dart" show MemCacheImpl;
 
 /**
  * General memcache exception.
@@ -80,6 +81,11 @@ class NetworkException extends MemcacheError {
  * from `dart:typed_data` provides a compact and efficient represetation.
  */
 abstract class Memcache {
+  /**
+   * Makes a new [Memcache] instance based on a [RawMemcache].
+   */
+  factory Memcache.fromRaw(RawMemcache raw) => new MemCacheImpl(raw);
+
   /**
    * Retreives a value from memcache.
    *

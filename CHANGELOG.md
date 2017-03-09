@@ -1,3 +1,7 @@
+## 0.2.1+1
+
+* Added [Memcache.fromRaw] constructor.
+
 ## 0.2.1
 
 * Added [BinaryMemcacheProtocol] which implements the [RawMemcache] API.
