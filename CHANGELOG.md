@@ -1,3 +1,9 @@
+## 0.2.1+2
+
+* Fix bug in [Memcache.get] to throw an exception if we a get operation resulted
+  in neither found/not-found but rather in an error (i.e. if the tcp connection
+  is fine, but the server returns an error instead found/not-found).
+
 ## 0.2.1+1
 
 * Added [Memcache.fromRaw] constructor.

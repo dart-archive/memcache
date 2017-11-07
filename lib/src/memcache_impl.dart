@@ -145,7 +145,10 @@ class MemCacheImpl implements Memcache {
             _addCas(key, result.cas);
           }
           if (result.status == raw.Status.KEY_NOT_FOUND) return null;
-          return asBinary ? result.value : UTF8.decode(result.value);
+          if (result.status == raw.Status.NO_ERROR) {
+            return asBinary ? result.value : UTF8.decode(result.value);
+          }
+          throw new MemcacheError(result.status, 'Error getting item');
         });
   }
 
@@ -166,14 +169,17 @@ class MemCacheImpl implements Memcache {
         var result = new Map();
         for (int i = 0; i < keysList.length; i++) {
           var value;
-          if (response[i].status == raw.Status.KEY_NOT_FOUND) {
+          final responseStatus = response[i].status;
+          if (responseStatus == raw.Status.KEY_NOT_FOUND) {
             value = null;
-          } else {
+          } else if (responseStatus == raw.Status.NO_ERROR) {
             value =
                 asBinary ? response[i].value : UTF8.decode(response[i].value);
             if (_withCas) {
               _addCas(binaryKeys[i], response[i].cas);
             }
+          } else {
+            throw new MemcacheError(responseStatus, 'Error getting item');
           }
           result[keysList[i]] = value;
         };
