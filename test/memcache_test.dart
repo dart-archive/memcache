@@ -20,6 +20,13 @@ class _MemcacheModifiedError extends TypeMatcher {
 
 const isMemcacheModifiedError = const _MemcacheModifiedError();
 
+class _MemcacheError extends TypeMatcher {
+  const _MemcacheError() : super("MemcacheError");
+  bool matches(item, Map matchState) => item is MemcacheError;
+}
+
+const isMemcacheError = const _MemcacheError();
+
 class IncrementDecrementTestData {
   final key;
   final delta;
@@ -93,6 +100,22 @@ main() {
     expect(memcache.get([65]), throwsA(isArgumentError));
     expect(memcache.get('A', asBinary: true), throwsA(isArgumentError));
     expect(memcache.get('A'), throwsA(isArgumentError));
+  });
+
+  test('get-returns-error-status', () {
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+
+    mock.registerGet((List<raw.GetOperation> batch) async {
+      final errorResult = new raw.GetResult(
+          raw.Status.ERROR, 'internal error', 0, 0, []);
+      return new List.generate(batch.length, (_) => errorResult);
+    });
+
+    expect(memcache.get([65], asBinary: true), throwsA(isMemcacheError));
+    expect(memcache.get('A', asBinary: true), throwsA(isMemcacheError));
+    expect(memcache.get([1, 2], asBinary: true), throwsA(isMemcacheError));
+    expect(memcache.get(['A', 'B'], asBinary: true), throwsA(isMemcacheError));
   });
 
   test('get-all', () {
@@ -214,6 +237,20 @@ main() {
       expect(memcache.set([65], 'B', action: action), throwsA(isArgumentError));
       expect(memcache.set('A', 'B', action: action), throwsA(isArgumentError));
     }
+  });
+
+  test('set-returns-error-status', () {
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+
+    mock.registerSet((List<raw.SetOperation> batch) async {
+      final errorResult = new raw.SetResult(
+          raw.Status.ERROR, 'internal error');
+      return new List.generate(batch.length, (_) => errorResult);
+    });
+
+    expect(memcache.set([65], [66]), throwsA(isMemcacheError));
+    expect(memcache.set('A', [66]), throwsA(isMemcacheError));
   });
 
   test('set-throw', () {
@@ -363,6 +400,22 @@ main() {
     }));
 
     expect(memcache.remove([65]), throwsA(isArgumentError));
+  });
+
+  test('get-returns-error-status', () {
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+
+    mock.registerRemove((List<raw.RemoveOperation> batch) async {
+      final errorResult = new raw.RemoveResult(
+          raw.Status.ERROR, 'internal error');
+      return new List.generate(batch.length, (_) => errorResult);
+    });
+
+    expect(memcache.remove([65]), throwsA(isMemcacheError));
+    expect(memcache.remove('A'), throwsA(isMemcacheError));
+    expect(memcache.remove([1, 2]), throwsA(isMemcacheError));
+    expect(memcache.remove(['A', 'B']), throwsA(isMemcacheError));
   });
 
   test('remove-throw', () {
