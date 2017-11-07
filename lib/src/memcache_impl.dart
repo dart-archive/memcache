@@ -246,7 +246,13 @@ class MemCacheImpl implements Memcache {
 
   Future remove(key) {
     return new Future.sync(() => _raw.remove([_createRemoveOperation(key)]))
-        .then((List<raw.RemoveResult> response) {
+        .then((List<raw.RemoveResult> responses) {
+          final result = responses[0];
+          if (result.status != raw.Status.NO_ERROR &&
+              result.status != raw.Status.KEY_NOT_FOUND) {
+            throw new MemcacheError(result.status, 'Error removing item');
+          }
+
           // The remove is considered succesful no matter whether the key was
           // there or not.
           return null;
@@ -259,10 +265,18 @@ class MemCacheImpl implements Memcache {
       keys.forEach((key) {
         request.add(_createRemoveOperation(key));
       });
-      return _raw.remove(request).then((List<raw.RemoveResult> response) {
-        if (response.length != request.length) {
+      return _raw.remove(request).then((List<raw.RemoveResult> responses) {
+        if (responses.length != request.length) {
           throw const MemcacheError.internalError();
         }
+
+        for (final result in responses) {
+          if (result.status != raw.Status.NO_ERROR &&
+              result.status != raw.Status.KEY_NOT_FOUND) {
+            throw new MemcacheError(result.status, 'Error removing item');
+          }
+        }
+
         // The remove is considered succesful no matter whether the key was
         // there or not.
         return null;

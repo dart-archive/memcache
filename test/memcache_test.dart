@@ -239,6 +239,20 @@ main() {
     }
   });
 
+  test('set-returns-error-status', () {
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+
+    mock.registerSet((List<raw.SetOperation> batch) async {
+      final errorResult = new raw.SetResult(
+          raw.Status.ERROR, 'internal error');
+      return new List.generate(batch.length, (_) => errorResult);
+    });
+
+    expect(memcache.set([65], [66]), throwsA(isMemcacheError));
+    expect(memcache.set('A', [66]), throwsA(isMemcacheError));
+  });
+
   test('set-throw', () {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
@@ -386,6 +400,22 @@ main() {
     }));
 
     expect(memcache.remove([65]), throwsA(isArgumentError));
+  });
+
+  test('get-returns-error-status', () {
+    var mock = new MockRawMemcache();
+    var memcache = new MemCacheImpl(mock);
+
+    mock.registerRemove((List<raw.RemoveOperation> batch) async {
+      final errorResult = new raw.RemoveResult(
+          raw.Status.ERROR, 'internal error');
+      return new List.generate(batch.length, (_) => errorResult);
+    });
+
+    expect(memcache.remove([65]), throwsA(isMemcacheError));
+    expect(memcache.remove('A'), throwsA(isMemcacheError));
+    expect(memcache.remove([1, 2]), throwsA(isMemcacheError));
+    expect(memcache.remove(['A', 'B']), throwsA(isMemcacheError));
   });
 
   test('remove-throw', () {
