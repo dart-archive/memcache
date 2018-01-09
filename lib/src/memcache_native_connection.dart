@@ -757,7 +757,7 @@ class MemCacheNativeConnection {
   }
 
   void onError(error) {
-    close(error).catchError((_) {});
+    close(error);
   }
 
   void onDone() {
@@ -785,6 +785,10 @@ class MemCacheNativeConnection {
       pending.completeError(new MemCacheError(error));
     });
 
-    await _socket.close();
+    try {
+      await _socket.close();
+    } catch (_) {
+      // Ignore errors. We've failed the pending requests anyway.
+    }
   }
 }
