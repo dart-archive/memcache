@@ -1,3 +1,7 @@
+## 0.2.2
+
+* Ignore exceptions when closing connection in error state.
+
 ## 0.2.1+2
 
 * Fix bug in [Memcache.get] to throw an exception if we a get operation resulted
