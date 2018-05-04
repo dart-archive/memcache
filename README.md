@@ -1,3 +1,6 @@
+[![Pub Package](https://img.shields.io/pub/v/memcache.svg)](https://pub.dartlang.org/packages/memcache)
+[![Build Status](https://travis-ci.org/dart-lang/memcache.svg?branch=master)](https://travis-ci.org/dart-lang/memcache)
+
 ## Memcache interface for the `appengine` package.
 
 This package define Dart interfaces for memcache. The package defines both
