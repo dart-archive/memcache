@@ -35,7 +35,7 @@ int fillTestData(List<int> message, StreamController controller) {
   totalMessages += fillChunks(message, controller);
 
   // Add double message in chunks.
-  var doubleMessage = new List();
+  var doubleMessage = new List<int>();
   doubleMessage.addAll(message);
   doubleMessage.addAll(message);
   totalMessages += 2 * fillChunks(doubleMessage, controller);
@@ -47,7 +47,7 @@ int fillTestData(List<int> message, StreamController controller) {
 
 Future testParser(List<int> message, Function f) {
   var completer = new Completer();
-  var controller = new StreamController();
+  var controller = new StreamController<List<int>>();
   var count = fillTestData(message, controller);
   controller.stream.transform(new ResponseTransformer()).listen(
       expectAsync1(f, count: count),
@@ -57,7 +57,7 @@ Future testParser(List<int> message, Function f) {
 
 Future testParserError(List<int> message, Function f) {
   var completer = new Completer();
-  var controller = new StreamController();
+  var controller = new StreamController<List<int>>();
   controller.add(message);
   controller.close();
   controller.stream.transform(new ResponseTransformer()).listen(
@@ -220,7 +220,7 @@ main() {
   group('parser-exceptions', () {
     Future testStreamError(error, Function f) {
       var completer = new Completer();
-      var controller = new StreamController();
+      var controller = new StreamController<List<int>>();
       controller.addError(error);
       controller.close();
       controller.stream.transform(new ResponseTransformer()).listen(

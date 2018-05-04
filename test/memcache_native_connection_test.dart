@@ -21,7 +21,7 @@ class Memcached {
   Memcached._(this.process);
 
   static Future<Memcached> start() {
-    var completer = new Completer();
+    var completer = new Completer<Memcached>();
     Directory.systemTemp.createTemp().then((tempDir) {
       // Start memcached asking for an empheral port and set a file in the
       // process environment for writing the actual port used.

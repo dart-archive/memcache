@@ -134,8 +134,7 @@ class MemCacheImpl implements Memcache {
   }
 
   Future get(Object key, {bool asBinary: false}) {
-    key = _createKey(key);
-    return new Future.sync(() => _raw.get([_createGetOperation(key)]))
+    return new Future.sync(() => _raw.get([_createGetOperation(_createKey(key))]))
         .then((List<raw.GetResult> response) {
           if (response.length != 1) {
             throw const MemcacheError.internalError();
@@ -157,7 +156,7 @@ class MemCacheImpl implements Memcache {
       // Copy the keys as they might get mutated by _createKey below.
       var keysList = keys.toList();
       var binaryKeys = new List(keysList.length);
-      var request = new List(keysList.length);
+      var request = new List<raw.GetOperation>(keysList.length);
       for (int i = 0; i < keysList.length; i++) {
         binaryKeys[i] = _createKey(keysList[i]);
         request[i] = _createGetOperation(binaryKeys[i]);
@@ -216,7 +215,7 @@ class MemCacheImpl implements Memcache {
                 {Duration expiration, SetAction action: SetAction.SET}) {
     return new Future.sync(() {
       _checkExpiration(expiration);
-      var request = [];
+      var request = <raw.SetOperation>[];
       keysAndValues.forEach((key, value) {
         key = _createKey(key);
         request.add(_createSetOperation(key, value, action, expiration));
@@ -261,10 +260,7 @@ class MemCacheImpl implements Memcache {
 
   Future removeAll(Iterable keys) {
     return new Future.sync(() {
-      var request = [];
-      keys.forEach((key) {
-        request.add(_createRemoveOperation(key));
-      });
+      var request = keys.map(_createRemoveOperation).toList(growable: false);
       return _raw.remove(request).then((List<raw.RemoveResult> responses) {
         if (responses.length != request.length) {
           throw const MemcacheError.internalError();

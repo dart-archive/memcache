@@ -529,11 +529,11 @@ class Response extends Header {
 
 class PendingRequest {
   final opaque;
-  final _completer = new Completer();
+  final _completer = new Completer<Response>();
 
   PendingRequest(Request request) : opaque = request.opaque;
 
-  Future get future => _completer.future;
+  Future<Response> get future => _completer.future;
 
   void complete(Response response) {
     _completer.complete(response);
@@ -545,7 +545,7 @@ class PendingRequest {
 }
 
 class ResponseTransformer
-    implements StreamTransformer<List<int>, Response> {
+    extends StreamTransformerBase<List<int>, Response> {
   const ResponseTransformer();
 
   Stream<Response> bind(Stream<List<int>> stream) {

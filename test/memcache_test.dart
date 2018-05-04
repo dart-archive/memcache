@@ -40,7 +40,8 @@ class IncrementDecrementTestData {
 }
 
 main() {
-  var ok = new raw.SetResult(raw.Status.NO_ERROR, null);
+  final setOk = new raw.SetResult(raw.Status.NO_ERROR, null);
+  final removeOk = new raw.RemoveResult(raw.Status.NO_ERROR, 'Done');
 
   group('memcache', () {
     test('get', () {
@@ -79,7 +80,7 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     mock.registerGet(expectAsync1((_) {
-      return new Future.error(new ArgumentError());
+      return new Future<List<raw.GetResult>>.error(new ArgumentError());
     }, count: 4));
 
     expect(memcache.get([65], asBinary: true), throwsA(isArgumentError));
@@ -115,7 +116,7 @@ main() {
     expect(memcache.get([65], asBinary: true), throwsA(isMemcacheError));
     expect(memcache.get('A', asBinary: true), throwsA(isMemcacheError));
     expect(memcache.get([1, 2], asBinary: true), throwsA(isMemcacheError));
-    expect(memcache.get(['A', 'B'], asBinary: true), throwsA(isMemcacheError));
+    expect(memcache.get(['A', 'B'], asBinary: true), throwsA(isArgumentError));
   });
 
   test('get-all', () {
@@ -166,7 +167,7 @@ main() {
       expect(batch[0].key, [65]);
       expect(batch[0].value, [66]);
       expect(batch[0].expiration, 0);
-      return new Future.value([ok]);
+      return new Future.value([setOk]);
     }, count: 4));
 
     expect(memcache.set([65], [66]), completion(isNull));
@@ -187,7 +188,7 @@ main() {
         expect(batch[0].value, [66]);
         expect(batch[0].expiration,
                expiration == null ? 0 : expiration.inSeconds);
-        return new Future.value([ok]);
+        return new Future.value([setOk]);
       }, count: 4));
 
       expect(memcache.set([65], [66], action: action, expiration: expiration),
@@ -223,7 +224,7 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     mock.registerSet(expectAsync1((_) {
-      return new Future.error(new ArgumentError());
+      return new Future<List<raw.SetResult>>.error(new ArgumentError());
     }, count: 16));
 
     expect(memcache.set([65], [66]), throwsA(isArgumentError));
@@ -304,7 +305,7 @@ main() {
 
     mock.registerSet(expectAsync1((batch) {
       checkSetAllBatch(batch, raw.SetOperation.SET, null);
-      return new Future.value([ok, ok]);
+      return new Future.value([setOk, setOk]);
     }, count: setAllMaps.length));
 
     for (var m in setAllMaps) {
@@ -319,7 +320,7 @@ main() {
     testWithExpiration(expiration) {
       mock.registerSet(expectAsync1((batch) {
         checkSetAllBatch(batch, operation, expiration);
-        return new Future.value([ok, ok]);
+        return new Future.value([setOk, setOk]);
       }, count: setAllMaps.length));
 
       for (var m in setAllMaps) {
@@ -351,7 +352,7 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     mock.registerSet(expectAsync1((_) {
-      return new Future.error(new ArgumentError());
+      return new Future<List<raw.SetResult>>.error(new ArgumentError());
     }, count: setAllMaps.length));
 
     for (var m in setAllMaps) {
@@ -384,7 +385,7 @@ main() {
     mock.registerRemove(expectAsync1((batch) {
       expect(batch.length, 1);
       expect(batch[0].key, [65]);
-      return new Future.value([ok]);
+      return new Future.value([removeOk]);
     }, count: 2));
 
     expect(memcache.remove([65]), completion(isNull));
@@ -396,13 +397,13 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     mock.registerRemove(expectAsync1((_) {
-      return new Future.error(new ArgumentError());
+      return new Future<List<raw.RemoveResult>>.error(new ArgumentError());
     }));
 
     expect(memcache.remove([65]), throwsA(isArgumentError));
   });
 
-  test('get-returns-error-status', () {
+  test('remove-returns-error-status', () {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
@@ -415,7 +416,7 @@ main() {
     expect(memcache.remove([65]), throwsA(isMemcacheError));
     expect(memcache.remove('A'), throwsA(isMemcacheError));
     expect(memcache.remove([1, 2]), throwsA(isMemcacheError));
-    expect(memcache.remove(['A', 'B']), throwsA(isMemcacheError));
+    expect(memcache.remove(['A', 'B']), throwsA(isArgumentError));
   });
 
   test('remove-throw', () {
@@ -501,7 +502,7 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     mock.registerIncrement(expectAsync1((_) {
-      return new Future.error(new ArgumentError());
+      return new Future<List<raw.IncrementResult>>.error(new ArgumentError());
     }));
 
     expect(memcache.increment('A'), throwsA(isArgumentError));
@@ -575,7 +576,7 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     mock.registerIncrement(expectAsync1((_) {
-      return new Future.error(new ArgumentError());
+      return new Future<List<raw.IncrementResult>>.error(new ArgumentError());
     }));
 
     expect(memcache.decrement('A'), throwsA(isArgumentError));
@@ -682,7 +683,7 @@ main() {
         mock.registerGet(null);
         mock.registerSet(expectAsync1((batch) {
           check(batch);
-          return new Future.value([ok]);
+          return new Future.value([setOk]);
         }, count: 2));
         return memcache.set([65], [66]).then((value) {
           expect(value, isNull);
@@ -715,7 +716,7 @@ main() {
         mock.registerGet(null);
         mock.registerSet(expectAsync1((batch) {
           check(batch, raw.SetOperation.ADD);
-          return new Future.value([ok]);
+          return new Future.value([setOk]);
         }));
         return memcache.set([65], [66], action: SetAction.ADD).then((value) {
           expect(value, isNull);
@@ -729,7 +730,7 @@ main() {
         mock.registerGet(null);
         mock.registerSet(expectAsync1((batch) {
           check(batch, raw.SetOperation.REPLACE);
-          return new Future.value([ok]);
+          return new Future.value([setOk]);
         }));
         return memcache.set([65], [66],
                             action: SetAction.REPLACE).then((value) {
@@ -788,7 +789,7 @@ main() {
         mock.registerGet(null);
         mock.registerSet(expectAsync1((batch) {
           check(batch);
-          return new Future.value([ok, ok]);
+          return new Future.value([setOk, setOk]);
         }));
         return memcache.setAll({key1: 'C', 'B': [68]}).then((value) {
           expect(value, isNull);
@@ -804,7 +805,7 @@ main() {
         mock.registerGet(null);
         mock.registerSet(expectAsync1((batch) {
           check(batch);
-          return new Future.value([ok, exists]);
+          return new Future.value([setOk, exists]);
         }));
         expect(memcache.setAll({key1: 'C', 'B': [68]}),
                throwsA(isMemcacheModifiedError));
@@ -817,7 +818,7 @@ main() {
         mock.registerGet(null);
         mock.registerSet(expectAsync1((batch) {
           check(batch, raw.SetOperation.ADD);
-          return new Future.value([ok, ok]);
+          return new Future.value([setOk, setOk]);
         }));
         return memcache.setAll({key1: 'C', 'B': [68]},
                                action: SetAction.ADD).then((value) {
@@ -832,7 +833,7 @@ main() {
         mock.registerGet(null);
         mock.registerSet(expectAsync1((batch) {
           check(batch, raw.SetOperation.REPLACE);
-          return new Future.value([ok, ok]);
+          return new Future.value([setOk, setOk]);
         }));
         return memcache.setAll({key1: 'C', 'B': [68]},
                                action: SetAction.REPLACE).then((value) {
@@ -845,7 +846,8 @@ main() {
   group('memcache-dont-modify-arguments', () {
     var mock;
     var memcache;
-    var result = new raw.GetResult(raw.Status.NO_ERROR, null, 0, null, [68]);
+    var getResult = new raw.GetResult(raw.Status.NO_ERROR, null, 0, null, [68]);
+    var removeResult = new raw.RemoveResult(raw.Status.NO_ERROR, 'Removed');
 
     setUp(() {
       mock = new MockRawMemcache();
@@ -862,7 +864,7 @@ main() {
         expect(batch.length, 2);
         expect(batch[0].key, [65]);
         expect(batch[1].key, [66]);
-        return new Future.value([result, result]);
+        return new Future.value([getResult, getResult]);
       }));
 
       var key1 = [65];
@@ -879,7 +881,7 @@ main() {
         expect(batch.length, 2);
         expect(batch[0].key, [65]);
         expect(batch[1].key, [66]);
-        return new Future.value([ok, ok]);
+        return new Future.value([setOk, setOk]);
       }));
 
       var key1 = [65];
@@ -901,7 +903,7 @@ main() {
         expect(batch.length, 2);
         expect(batch[0].key, [65]);
         expect(batch[1].key, [66]);
-        return new Future.value([result, result]);
+        return new Future.value([removeResult, removeResult]);
       }));
 
       var key1 = [65];
