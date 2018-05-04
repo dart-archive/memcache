@@ -1,0 +1,23 @@
+language: dart
+sudo: false
+
+# Run against dev channel.
+dart:
+  - dev
+
+# Define test tasks to run.
+dart_task:
+  - test: --platform vm
+  - dartfmt
+  - dartanalyzer
+
+# Only building master means that we don't run two builds for each pull request.
+branches:
+  only: [master]
+
+os:
+  - linux
+
+cache:
+  directories:
+    - $HOME/.pub-cache
