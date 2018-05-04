@@ -50,8 +50,8 @@ Future testParser(List<int> message, Function f) {
   var controller = new StreamController();
   var count = fillTestData(message, controller);
   controller.stream.transform(new ResponseTransformer()).listen(
-      expectAsync(f, count: count),
-      onDone: expectAsync(completer.complete));
+      expectAsync1(f, count: count),
+      onDone: expectAsync0(completer.complete));
   return completer.future;
 }
 
@@ -63,7 +63,7 @@ Future testParserError(List<int> message, Function f) {
   controller.stream.transform(new ResponseTransformer()).listen(
       (_) => completer.completeError('Unexpected message'),
       onError: f,
-      onDone: expectAsync(() {
+      onDone: expectAsync0(() {
         if (!completer.isCompleted) completer.complete();
       }));
   return completer.future;
@@ -170,7 +170,7 @@ main() {
                    0, 0, 0, 0, 0, 78, 111, 116, 32, 102, 111, 117, 110, 100];
       return testParserError(
           bytes,
-          expectAsync((error) => expect(error is MemCacheError, isTrue)));
+          expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
 
     test('short-message', () {
@@ -180,7 +180,7 @@ main() {
                    0, 0, 0, 0, 0, 78, 111, 116, 32, 102, 111, 117, 110];
       return testParserError(
           bytes,
-          expectAsync((error) => expect(error is MemCacheError, isTrue)));
+          expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
 
     test('invalid-key-length', () {
@@ -191,7 +191,7 @@ main() {
                    0, 0, 0, 0, 1, 13, 234, 222, 239, 1, 1];
       return testParserError(
           bytes,
-          expectAsync((error) => expect(error is MemCacheError, isTrue)));
+          expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
 
     test('invalid-extras-length', () {
@@ -202,7 +202,7 @@ main() {
                    0, 0, 0, 0, 1, 13, 234, 222, 239, 1, 1];
       return testParserError(
           bytes,
-          expectAsync((error) => expect(error is MemCacheError, isTrue)));
+          expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
 
     test('invalid-get-extras-length', () {
@@ -213,7 +213,7 @@ main() {
                    0, 0, 0, 0, 1, 13, 234, 222, 239, 1, 1];
       return testParserError(
           bytes,
-          expectAsync((error) => expect(error is MemCacheError, isTrue)));
+          expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
   });
 
@@ -235,13 +235,13 @@ main() {
     test('stream-error-string', () {
       return testStreamError(
           "error",
-          expectAsync((error) => expect(error is MemCacheError, isTrue)));
+          expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
 
     test('stream-error-socket', () {
       return testStreamError(
           new SocketException("socket exception"),
-          expectAsync((error) => expect(error is MemCacheError, isTrue)));
+          expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
   });
 }

@@ -52,7 +52,7 @@ main() {
       var foundB = new raw.GetResult(
           raw.Status.NO_ERROR, 'Not found', 0, null, [66]);
 
-      mock.registerGet(expectAsync((batch) {
+      mock.registerGet(expectAsync1((batch) {
         expect(batch.length, 1);
         expect(batch[0].key, [65]);
         return new Future.value([notFound]);
@@ -61,7 +61,7 @@ main() {
       expect(memcache.get([65]), completion(isNull));
       expect(memcache.get('A'), completion(isNull));
 
-      mock.registerGet(expectAsync((batch) {
+      mock.registerGet(expectAsync1((batch) {
         expect(batch.length, 1);
         expect(batch[0].key, [65]);
         return new Future.value([foundB]);
@@ -78,7 +78,7 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerGet(expectAsync((_) {
+    mock.registerGet(expectAsync1((_) {
       return new Future.error(new ArgumentError());
     }, count: 4));
 
@@ -129,7 +129,7 @@ main() {
         raw.Status.NO_ERROR, null, 0, null, [66]);
     var foundCD = new raw.GetResult(
         raw.Status.NO_ERROR, null, 0, null, [69, 70]);
-    mock.registerGet(expectAsync((batch) {
+    mock.registerGet(expectAsync1((batch) {
       expect(batch.length, keys.length);
       for (var i = 0; i < keys.length; i++) {
         expect(batch[i].key, keys[i]);
@@ -160,7 +160,7 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerSet(expectAsync((batch) {
+    mock.registerSet(expectAsync1((batch) {
       expect(batch.length, 1);
       expect(batch[0].operation, raw.SetOperation.SET);
       expect(batch[0].key, [65]);
@@ -180,7 +180,7 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     testWithExpiration(expiration) {
-      mock.registerSet(expectAsync((batch) {
+      mock.registerSet(expectAsync1((batch) {
         expect(batch.length, 1);
         expect(batch[0].operation, operation);
         expect(batch[0].key, [65]);
@@ -222,7 +222,7 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerSet(expectAsync((_) {
+    mock.registerSet(expectAsync1((_) {
       return new Future.error(new ArgumentError());
     }, count: 16));
 
@@ -302,7 +302,7 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerSet(expectAsync((batch) {
+    mock.registerSet(expectAsync1((batch) {
       checkSetAllBatch(batch, raw.SetOperation.SET, null);
       return new Future.value([ok, ok]);
     }, count: setAllMaps.length));
@@ -317,7 +317,7 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     testWithExpiration(expiration) {
-      mock.registerSet(expectAsync((batch) {
+      mock.registerSet(expectAsync1((batch) {
         checkSetAllBatch(batch, operation, expiration);
         return new Future.value([ok, ok]);
       }, count: setAllMaps.length));
@@ -350,7 +350,7 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerSet(expectAsync((_) {
+    mock.registerSet(expectAsync1((_) {
       return new Future.error(new ArgumentError());
     }, count: setAllMaps.length));
 
@@ -381,7 +381,7 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerRemove(expectAsync((batch) {
+    mock.registerRemove(expectAsync1((batch) {
       expect(batch.length, 1);
       expect(batch[0].key, [65]);
       return new Future.value([ok]);
@@ -395,7 +395,7 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerRemove(expectAsync((_) {
+    mock.registerRemove(expectAsync1((_) {
       return new Future.error(new ArgumentError());
     }));
 
@@ -463,7 +463,7 @@ main() {
     var count = 0;
     var value;
 
-    mock.registerIncrement(expectAsync((batch) {
+    mock.registerIncrement(expectAsync1((batch) {
       expect(batch.length, 1);
       expect(batch[0].key, [65]);
       if (testData[count].delta >= 0) {
@@ -500,7 +500,7 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerIncrement(expectAsync((_) {
+    mock.registerIncrement(expectAsync1((_) {
       return new Future.error(new ArgumentError());
     }));
 
@@ -539,7 +539,7 @@ main() {
     var count = 0;
     var value;
 
-    mock.registerIncrement(expectAsync((batch) {
+    mock.registerIncrement(expectAsync1((batch) {
       expect(batch.length, 1);
       expect(batch[0].key, [65]);
       if (testData[count][1] > 0) {
@@ -574,7 +574,7 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerIncrement(expectAsync((_) {
+    mock.registerIncrement(expectAsync1((_) {
       return new Future.error(new ArgumentError());
     }));
 
@@ -596,7 +596,7 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerClear(expectAsync(() => null, count: 2));
+    mock.registerClear(expectAsync0(() => null, count: 2));
 
     expect(memcache.clear(), completion(isNull));
     expect(memcache.clear(), completion(isNull));
@@ -606,7 +606,7 @@ main() {
     var mock = new MockRawMemcache();
     var memcache = new MemCacheImpl(mock);
 
-    mock.registerClear(expectAsync(() {
+    mock.registerClear(expectAsync0(() {
       return new Future.error(new ArgumentError());
     }));
 
@@ -651,7 +651,7 @@ main() {
       mock = new MockRawMemcache();
       memcache = new MemCacheImpl(mock).withCAS();
 
-      mock.registerGet(expectAsync((batch) {
+      mock.registerGet(expectAsync1((batch) {
         expect(batch.length, 1);
         expect(batch[0].key, [65]);
         return new Future.value([result]);
@@ -680,7 +680,7 @@ main() {
       return memcache.get([65]).then((value) {
         expect(value, 'B');
         mock.registerGet(null);
-        mock.registerSet(expectAsync((batch) {
+        mock.registerSet(expectAsync1((batch) {
           check(batch);
           return new Future.value([ok]);
         }, count: 2));
@@ -699,7 +699,7 @@ main() {
       return memcache.get([65]).then((value) {
         expect(value, 'B');
         mock.registerGet(null);
-        mock.registerSet(expectAsync((batch) {
+        mock.registerSet(expectAsync1((batch) {
           check(batch);
           return new Future.value([exists]);
         }, count: 2));
@@ -713,7 +713,7 @@ main() {
       return memcache.get([65]).then((value) {
         expect(value, 'B');
         mock.registerGet(null);
-        mock.registerSet(expectAsync((batch) {
+        mock.registerSet(expectAsync1((batch) {
           check(batch, raw.SetOperation.ADD);
           return new Future.value([ok]);
         }));
@@ -727,7 +727,7 @@ main() {
       return memcache.get([65]).then((value) {
         expect(value, 'B');
         mock.registerGet(null);
-        mock.registerSet(expectAsync((batch) {
+        mock.registerSet(expectAsync1((batch) {
           check(batch, raw.SetOperation.REPLACE);
           return new Future.value([ok]);
         }));
@@ -753,7 +753,7 @@ main() {
       mock = new MockRawMemcache();
       memcache = new MemCacheImpl(mock).withCAS();
 
-      mock.registerGet(expectAsync((batch) {
+      mock.registerGet(expectAsync1((batch) {
         expect(batch.length, 2);
         expect(batch[0].key, key1);
         expect(batch[1].key, [66]);
@@ -786,7 +786,7 @@ main() {
       return memcache.getAll([key1, "B"]).then((values) {
         expect(values.length, 2);
         mock.registerGet(null);
-        mock.registerSet(expectAsync((batch) {
+        mock.registerSet(expectAsync1((batch) {
           check(batch);
           return new Future.value([ok, ok]);
         }));
@@ -802,7 +802,7 @@ main() {
       return memcache.getAll([key1, "B"]).then((values) {
         expect(values.length, 2);
         mock.registerGet(null);
-        mock.registerSet(expectAsync((batch) {
+        mock.registerSet(expectAsync1((batch) {
           check(batch);
           return new Future.value([ok, exists]);
         }));
@@ -815,7 +815,7 @@ main() {
       return memcache.getAll([key1, "B"]).then((values) {
         expect(values.length, 2);
         mock.registerGet(null);
-        mock.registerSet(expectAsync((batch) {
+        mock.registerSet(expectAsync1((batch) {
           check(batch, raw.SetOperation.ADD);
           return new Future.value([ok, ok]);
         }));
@@ -830,7 +830,7 @@ main() {
       return memcache.getAll([key1, "B"]).then((values) {
         expect(values.length, 2);
         mock.registerGet(null);
-        mock.registerSet(expectAsync((batch) {
+        mock.registerSet(expectAsync1((batch) {
           check(batch, raw.SetOperation.REPLACE);
           return new Future.value([ok, ok]);
         }));
@@ -858,7 +858,7 @@ main() {
     });
 
     test('get-all', () {
-      mock.registerGet(expectAsync((batch) {
+      mock.registerGet(expectAsync1((batch) {
         expect(batch.length, 2);
         expect(batch[0].key, [65]);
         expect(batch[1].key, [66]);
@@ -875,7 +875,7 @@ main() {
     });
 
     test('set-all', () {
-      mock.registerSet(expectAsync((batch) {
+      mock.registerSet(expectAsync1((batch) {
         expect(batch.length, 2);
         expect(batch[0].key, [65]);
         expect(batch[1].key, [66]);
@@ -897,7 +897,7 @@ main() {
     });
 
     test('remove-all', () {
-      mock.registerRemove(expectAsync((batch) {
+      mock.registerRemove(expectAsync1((batch) {
         expect(batch.length, 2);
         expect(batch[0].key, [65]);
         expect(batch[1].key, [66]);
