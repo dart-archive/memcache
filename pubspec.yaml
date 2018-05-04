@@ -1,9 +1,9 @@
 name: memcache
-version: 0.2.2
+version: 0.3.0
 author: Dart Team <misc@dartlang.org>
 description: Dart memcache APIs
 homepage: https://github.com/dart-lang/memcache
 environment:
-  sdk: ">=1.22.0 <2.0.0"
+  sdk: ">=2.0.0-dev.20.0 <2.0.0"
 dev_dependencies:
   test: '^0.12.0'

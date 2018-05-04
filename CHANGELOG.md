@@ -1,3 +1,7 @@
+## 0.3.0
+
+* Update code for Dart 2.
+
 ## 0.2.2
 
 * Ignore exceptions when closing connection in error state.

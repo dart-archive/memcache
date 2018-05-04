@@ -181,7 +181,8 @@ class MemCacheImpl implements Memcache {
             throw new MemcacheError(responseStatus, 'Error getting item');
           }
           result[keysList[i]] = value;
-        };
+        }
+
         return result;
       });
     });
