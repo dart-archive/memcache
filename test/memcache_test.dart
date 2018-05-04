@@ -116,7 +116,6 @@ main() {
     expect(memcache.get([65], asBinary: true), throwsA(isMemcacheError));
     expect(memcache.get('A', asBinary: true), throwsA(isMemcacheError));
     expect(memcache.get([1, 2], asBinary: true), throwsA(isMemcacheError));
-    expect(memcache.get(['A', 'B'], asBinary: true), throwsA(isArgumentError));
   });
 
   test('get-all', () {
@@ -416,7 +415,6 @@ main() {
     expect(memcache.remove([65]), throwsA(isMemcacheError));
     expect(memcache.remove('A'), throwsA(isMemcacheError));
     expect(memcache.remove([1, 2]), throwsA(isMemcacheError));
-    expect(memcache.remove(['A', 'B']), throwsA(isArgumentError));
   });
 
   test('remove-throw', () {
