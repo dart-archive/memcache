@@ -35,8 +35,8 @@ class Memcached {
           var memcached = new Memcached._(process);
           bool listening = false;
           // Write all stdout to a string buffer.
-          process.stdout.transform(UTF8.decoder).listen(memcached.stdout.write);
-          process.stderr.transform(UTF8.decoder).listen((s) {
+          process.stdout.transform(utf8.decoder).listen(memcached.stdout.write);
+          process.stderr.transform(utf8.decoder).listen((s) {
             // Write all stderr to a string buffer.
             memcached.stderr.write(s);
             // Wait for the server to be listening. This is signalled by the
@@ -102,7 +102,7 @@ main() {
   checkUint64Value(response, int value) {
     var bytes = new Uint8List(8);
     var data = new ByteData.view(bytes.buffer);
-    data.setUint64(0, value, Endianness.BIG_ENDIAN);
+    data.setUint64(0, value, Endian.big);
     expect(response.value, bytes);
   }
 

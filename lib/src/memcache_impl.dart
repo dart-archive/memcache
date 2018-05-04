@@ -62,7 +62,7 @@ class MemCacheImpl implements Memcache {
 
   List<int> _createKey(Object key) {
     if (key is String) {
-      key = UTF8.encode(key);
+      key = utf8.encode(key);
     } else {
       if (key is! List<int>) {
         throw new ArgumentError('Key must have type String or List<int>');
@@ -73,7 +73,7 @@ class MemCacheImpl implements Memcache {
 
   List<int> _createValue(Object value) {
     if (value is String) {
-      value = UTF8.encode(value);
+      value = utf8.encode(value);
     } else {
       if (value is! List<int>) {
         throw new ArgumentError('Value must have type String or List<int>');
@@ -145,7 +145,7 @@ class MemCacheImpl implements Memcache {
           }
           if (result.status == raw.Status.KEY_NOT_FOUND) return null;
           if (result.status == raw.Status.NO_ERROR) {
-            return asBinary ? result.value : UTF8.decode(result.value);
+            return asBinary ? result.value : utf8.decode(result.value);
           }
           throw new MemcacheError(result.status, 'Error getting item');
         });
@@ -173,7 +173,7 @@ class MemCacheImpl implements Memcache {
             value = null;
           } else if (responseStatus == raw.Status.NO_ERROR) {
             value =
-                asBinary ? response[i].value : UTF8.decode(response[i].value);
+                asBinary ? response[i].value : utf8.decode(response[i].value);
             if (_withCas) {
               _addCas(binaryKeys[i], response[i].cas);
             }
