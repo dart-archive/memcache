@@ -344,7 +344,7 @@ main() {
 
     test('decrement', () {
       var decr = new Request.decrement([1], 1, 10);
-      var decr2 = new Request.decrement([1], 0xffffffffffffffffffff, 10);
+      var decr2 = new Request.decrement([1], 0xffffffffffffffff, 10);
       return MemCacheNativeConnection.connect(
           "127.0.0.1", memcached.port).then((connection) {
         return connection.sendRequest(decr).then((response) {
