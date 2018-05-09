@@ -62,7 +62,7 @@ class MemCacheImpl implements Memcache {
 
   List<int> _createKey(Object key) {
     if (key is String) {
-      key = UTF8.encode(key);
+      key = utf8.encode(key);
     } else {
       if (key is! List<int>) {
         throw new ArgumentError('Key must have type String or List<int>');
@@ -73,7 +73,7 @@ class MemCacheImpl implements Memcache {
 
   List<int> _createValue(Object value) {
     if (value is String) {
-      value = UTF8.encode(value);
+      value = utf8.encode(value);
     } else {
       if (value is! List<int>) {
         throw new ArgumentError('Value must have type String or List<int>');
@@ -134,8 +134,7 @@ class MemCacheImpl implements Memcache {
   }
 
   Future get(Object key, {bool asBinary: false}) {
-    key = _createKey(key);
-    return new Future.sync(() => _raw.get([_createGetOperation(key)]))
+    return new Future.sync(() => _raw.get([_createGetOperation(_createKey(key))]))
         .then((List<raw.GetResult> response) {
           if (response.length != 1) {
             throw const MemcacheError.internalError();
@@ -146,7 +145,7 @@ class MemCacheImpl implements Memcache {
           }
           if (result.status == raw.Status.KEY_NOT_FOUND) return null;
           if (result.status == raw.Status.NO_ERROR) {
-            return asBinary ? result.value : UTF8.decode(result.value);
+            return asBinary ? result.value : utf8.decode(result.value);
           }
           throw new MemcacheError(result.status, 'Error getting item');
         });
@@ -157,7 +156,7 @@ class MemCacheImpl implements Memcache {
       // Copy the keys as they might get mutated by _createKey below.
       var keysList = keys.toList();
       var binaryKeys = new List(keysList.length);
-      var request = new List(keysList.length);
+      var request = new List<raw.GetOperation>(keysList.length);
       for (int i = 0; i < keysList.length; i++) {
         binaryKeys[i] = _createKey(keysList[i]);
         request[i] = _createGetOperation(binaryKeys[i]);
@@ -174,7 +173,7 @@ class MemCacheImpl implements Memcache {
             value = null;
           } else if (responseStatus == raw.Status.NO_ERROR) {
             value =
-                asBinary ? response[i].value : UTF8.decode(response[i].value);
+                asBinary ? response[i].value : utf8.decode(response[i].value);
             if (_withCas) {
               _addCas(binaryKeys[i], response[i].cas);
             }
@@ -182,7 +181,8 @@ class MemCacheImpl implements Memcache {
             throw new MemcacheError(responseStatus, 'Error getting item');
           }
           result[keysList[i]] = value;
-        };
+        }
+
         return result;
       });
     });
@@ -216,7 +216,7 @@ class MemCacheImpl implements Memcache {
                 {Duration expiration, SetAction action: SetAction.SET}) {
     return new Future.sync(() {
       _checkExpiration(expiration);
-      var request = [];
+      var request = <raw.SetOperation>[];
       keysAndValues.forEach((key, value) {
         key = _createKey(key);
         request.add(_createSetOperation(key, value, action, expiration));
@@ -261,10 +261,7 @@ class MemCacheImpl implements Memcache {
 
   Future removeAll(Iterable keys) {
     return new Future.sync(() {
-      var request = [];
-      keys.forEach((key) {
-        request.add(_createRemoveOperation(key));
-      });
+      var request = keys.map(_createRemoveOperation).toList(growable: false);
       return _raw.remove(request).then((List<raw.RemoveResult> responses) {
         if (responses.length != request.length) {
           throw const MemcacheError.internalError();

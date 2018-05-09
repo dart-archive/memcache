@@ -167,27 +167,27 @@ class Header {
 
   int get opcode => bytes[OPCODE_OFFSET];
 
-  int get keyLength => data.getUint16(KEY_LENGTH_OFFSET, Endianness.BIG_ENDIAN);
+  int get keyLength => data.getUint16(KEY_LENGTH_OFFSET, Endian.big);
 
   int get extrasLength => bytes[EXTRAS_LENGTH_OFFSET];
 
   int get dataType => bytes[DATA_TYPE_OFFSET];
 
   int get vbucketIdOrStatus {
-    return data.getUint16(VBUCKET_ID_OR_STATUS_OFFSET, Endianness.BIG_ENDIAN);
+    return data.getUint16(VBUCKET_ID_OR_STATUS_OFFSET, Endian.big);
   }
 
   int get totalBodyLength {
-    return data.getUint32(TOTAL_BODY_LENGTH_OFFSET, Endianness.BIG_ENDIAN);
+    return data.getUint32(TOTAL_BODY_LENGTH_OFFSET, Endian.big);
   }
 
-  int get opaque => data.getUint32(OPAQUE_OFFSET, Endianness.BIG_ENDIAN);
+  int get opaque => data.getUint32(OPAQUE_OFFSET, Endian.big);
 
   void set opaque(int value) {
-    return data.setUint32(OPAQUE_OFFSET, value, Endianness.BIG_ENDIAN);
+    return data.setUint32(OPAQUE_OFFSET, value, Endian.big);
   }
 
-  int get cas => data.getUint64(CAS_OFFSET, Endianness.BIG_ENDIAN);
+  int get cas => data.getUint64(CAS_OFFSET, Endian.big);
 
   int get valueLength => totalBodyLength - extrasLength - keyLength;
 
@@ -207,7 +207,7 @@ class Header {
   String get valueAsString {
     var valueInBytes = value;
     if (valueInBytes == null) return null;
-    return UTF8.decode(valueInBytes);
+    return utf8.decode(valueInBytes);
   }
 
 
@@ -220,7 +220,7 @@ class Header {
 
   static int totalBodyLengthFromHeader(Uint8List header) {
     return new ByteData.view(header.buffer, header.offsetInBytes).getUint32(
-        TOTAL_BODY_LENGTH_OFFSET, Endianness.BIG_ENDIAN);
+        TOTAL_BODY_LENGTH_OFFSET, Endian.big);
   }
 }
 
@@ -299,13 +299,13 @@ class Request extends Header {
     bytes[Header.OPCODE_OFFSET] = opcode;
     data.setUint16(Header.KEY_LENGTH_OFFSET,
                    key != null ? key.length : 0,
-                   Endianness.BIG_ENDIAN);
+                   Endian.big);
     bytes[Header.EXTRAS_LENGTH_OFFSET] = extrasLen;
     data.setUint32(Header.TOTAL_BODY_LENGTH_OFFSET,
                    bytes.length - HEADER_LEN,
-                   Endianness.BIG_ENDIAN);
-    data.setUint32(Header.OPAQUE_OFFSET, 0, Endianness.BIG_ENDIAN);
-    data.setUint64(Header.CAS_OFFSET, cas, Endianness.BIG_ENDIAN);
+                   Endian.big);
+    data.setUint32(Header.OPAQUE_OFFSET, 0, Endian.big);
+    data.setUint64(Header.CAS_OFFSET, cas, Endian.big);
     var keyOffset = HEADER_LEN + extrasLen;
     var valueOffset = keyOffset + (key != null ? key.length : 0);
     if (key != null) {
@@ -383,9 +383,9 @@ class Request extends Header {
             throw "Unsupported";
         }
     var request = new Request(opcode, extrasLength, key, value, cas);
-    request.data.setUint32(FLAGS_OFFSET, flags, Endianness.BIG_ENDIAN);
+    request.data.setUint32(FLAGS_OFFSET, flags, Endian.big);
     request.data.setUint32(
-        EXPIRATION_OFFSET, expiration, Endianness.BIG_ENDIAN);
+        EXPIRATION_OFFSET, expiration, Endian.big);
     return request;
   }
 
@@ -405,11 +405,11 @@ class Request extends Header {
       List<int> key, int delta, int initialValue, int expiration) {
     var request = new Request(
         opcode, INCREMENT_EXTRAS_LENGTH, key, null);
-    request.data.setUint64(DELTA_OFFSET, delta, Endianness.BIG_ENDIAN);
+    request.data.setUint64(DELTA_OFFSET, delta, Endian.big);
     request.data.setUint64(
-        INITIAL_VALUE_OFFSET, initialValue, Endianness.BIG_ENDIAN);
+        INITIAL_VALUE_OFFSET, initialValue, Endian.big);
     request.data.setUint32(
-        INCREMENT_EXPIRATION_OFFSET, expiration, Endianness.BIG_ENDIAN);
+        INCREMENT_EXPIRATION_OFFSET, expiration, Endian.big);
     return request;
   }
 
@@ -422,7 +422,7 @@ class Request extends Header {
   int get flags {
     // The flags are always the first four bytes of the extras data.
     if (extrasLength >= 4) {
-      return data.getUint32(FLAGS_OFFSET, Endianness.BIG_ENDIAN);
+      return data.getUint32(FLAGS_OFFSET, Endian.big);
     } else {
       throw new MemCacheError('Request for $opcode does not contain flags');
     }
@@ -498,7 +498,7 @@ class Response extends Header {
 
   int get flags {
     if (extrasLength >= 4) {
-      return data.getUint32(FLAGS_OFFSET, Endianness.BIG_ENDIAN);
+      return data.getUint32(FLAGS_OFFSET, Endian.big);
     } else {
       throw new MemCacheError('Request for $opcode does not contain flags');
     }
@@ -506,7 +506,7 @@ class Response extends Header {
 
   int get incrDecrValue {
     if (extrasLength == 0 && keyLength == 0 && totalBodyLength == 8) {
-      return data.getUint64(INCREMENT_VALUE_OFFSET, Endianness.BIG_ENDIAN);
+      return data.getUint64(INCREMENT_VALUE_OFFSET, Endian.big);
     } else {
       throw new MemCacheError('Request for $opcode does not contain '
                               'incremented/decremented value');
@@ -529,11 +529,11 @@ class Response extends Header {
 
 class PendingRequest {
   final opaque;
-  final _completer = new Completer();
+  final _completer = new Completer<Response>();
 
   PendingRequest(Request request) : opaque = request.opaque;
 
-  Future get future => _completer.future;
+  Future<Response> get future => _completer.future;
 
   void complete(Response response) {
     _completer.complete(response);
@@ -545,7 +545,7 @@ class PendingRequest {
 }
 
 class ResponseTransformer
-    implements StreamTransformer<List<int>, Response> {
+    extends StreamTransformerBase<List<int>, Response> {
   const ResponseTransformer();
 
   Stream<Response> bind(Stream<List<int>> stream) {
@@ -625,7 +625,7 @@ class _ResponseTransformerSink implements EventSink<List<int>> {
             var totalBodyLengthIndex = index + Header.TOTAL_BODY_LENGTH_OFFSET;
             var totalBodyLength = new ByteData.view(
                 bytes.buffer, bytes.offsetInBytes + totalBodyLengthIndex, 4)
-                    .getUint32(0, Endianness.BIG_ENDIAN);
+                    .getUint32(0, Endian.big);
             var totalMessageLength = Response.HEADER_LEN + totalBodyLength;
             if (length - index >= totalMessageLength) {
               if (index == 0 && bytes.length == totalMessageLength) {

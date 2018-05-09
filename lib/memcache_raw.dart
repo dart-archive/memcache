@@ -155,10 +155,10 @@ class BinaryMemcacheProtocol implements RawMemcache {
     if (_connection == null || _connection.isClosed) {
       _connection = await _dialer.dial();
     }
-    final List<Future> futures = batch.map((GetOperation op) {
+    final futures = batch.map((GetOperation op) {
       final request = new api.Request.get(op.key);
       return _connection.sendRequest(request);
-    }).toList(growable: false);
+    });
 
     final List<api.Response> responses = await Future.wait(futures);
     return responses.map((api.Response response) {
@@ -180,7 +180,7 @@ class BinaryMemcacheProtocol implements RawMemcache {
     if (_connection == null || _connection.isClosed) {
       _connection = await _dialer.dial();
     }
-    final List<Future> futures = batch.map((SetOperation op) {
+    final futures = batch.map((SetOperation op) {
       switch (op.operation) {
         case SetOperation.SET:
           return _connection.sendRequest(new api.Request.set(op.key, op.value,
@@ -202,7 +202,7 @@ class BinaryMemcacheProtocol implements RawMemcache {
               cas: op.cas ?? 0,
               expiration: op.expiration ?? 0));
       }
-    }).toList(growable: false);
+    });
 
     final List<api.Response> responses = await Future.wait(futures);
     return responses.map((api.Response response) {
@@ -225,10 +225,10 @@ class BinaryMemcacheProtocol implements RawMemcache {
     if (_connection == null || _connection.isClosed) {
       _connection = await _dialer.dial();
     }
-    final List<Future> futures = batch.map((RemoveOperation op) {
+    final futures = batch.map((RemoveOperation op) {
       final request = new api.Request.delete(op.key);
       return _connection.sendRequest(request);
-    }).toList(growable: false);
+    });
 
     final List<api.Response> responses = await Future.wait(futures);
     return responses.map((api.Response response) {
@@ -248,7 +248,7 @@ class BinaryMemcacheProtocol implements RawMemcache {
     if (_connection == null || _connection.isClosed) {
       _connection = await _dialer.dial();
     }
-    final List<Future> futures = batch.map((IncrementOperation op) {
+    final futures = batch.map((IncrementOperation op) {
       switch (op.direction) {
         case IncrementOperation.INCREMENT:
           return _connection.sendRequest(
@@ -260,7 +260,7 @@ class BinaryMemcacheProtocol implements RawMemcache {
           throw new ArgumentError(
               'The direction must be increment or decrement!');
       }
-    }).toList(growable: false);
+    });
 
     final List<api.Response> responses = await Future.wait(futures);
     return responses.map((api.Response response) {
