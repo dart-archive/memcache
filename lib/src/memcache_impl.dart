@@ -11,15 +11,13 @@ import 'dart:convert';
 import '../memcache.dart';
 import '../memcache_raw.dart' as raw;
 
-
 class MemCacheImpl implements Memcache {
   final raw.RawMemcache _raw;
   final bool _withCas;
   Map<List<int>, int> _cas;
   Expando _hashCache;
 
-  MemCacheImpl(this._raw, { withCas: false})
-      : _withCas = withCas {
+  MemCacheImpl(this._raw, {withCas: false}) : _withCas = withCas {
     if (withCas) {
       _cas = new HashMap(equals: _keyCompare, hashCode: _keyHash);
       _hashCache = new Expando<int>();
@@ -103,9 +101,14 @@ class MemCacheImpl implements Memcache {
         operation = raw.SetOperation.SET;
         if (_withCas) cas = _findCas(key);
         break;
-      case SetAction.ADD: operation = raw.SetOperation.ADD; break;
-      case SetAction.REPLACE: operation = raw.SetOperation.REPLACE; break;
-      default: throw new ArgumentError('Unsupported set action $action');
+      case SetAction.ADD:
+        operation = raw.SetOperation.ADD;
+        break;
+      case SetAction.REPLACE:
+        operation = raw.SetOperation.REPLACE;
+        break;
+      default:
+        throw new ArgumentError('Unsupported set action $action');
     }
     var exp = expiration != null ? expiration.inSeconds : 0;
     return new raw.SetOperation(
@@ -134,21 +137,22 @@ class MemCacheImpl implements Memcache {
   }
 
   Future get(Object key, {bool asBinary: false}) {
-    return new Future.sync(() => _raw.get([_createGetOperation(_createKey(key))]))
+    return new Future.sync(
+            () => _raw.get([_createGetOperation(_createKey(key))]))
         .then((List<raw.GetResult> response) {
-          if (response.length != 1) {
-            throw const MemcacheError.internalError();
-          }
-          var result = response.first;
-          if (_withCas) {
-            _addCas(key, result.cas);
-          }
-          if (result.status == raw.Status.KEY_NOT_FOUND) return null;
-          if (result.status == raw.Status.NO_ERROR) {
-            return asBinary ? result.value : utf8.decode(result.value);
-          }
-          throw new MemcacheError(result.status, 'Error getting item');
-        });
+      if (response.length != 1) {
+        throw const MemcacheError.internalError();
+      }
+      var result = response.first;
+      if (_withCas) {
+        _addCas(key, result.cas);
+      }
+      if (result.status == raw.Status.KEY_NOT_FOUND) return null;
+      if (result.status == raw.Status.NO_ERROR) {
+        return asBinary ? result.value : utf8.decode(result.value);
+      }
+      throw new MemcacheError(result.status, 'Error getting item');
+    });
   }
 
   Future<Map> getAll(Iterable keys, {bool asBinary: false}) {
@@ -189,31 +193,32 @@ class MemCacheImpl implements Memcache {
   }
 
   Future set(key, value,
-             {Duration expiration, SetAction action: SetAction.SET}) {
+      {Duration expiration, SetAction action: SetAction.SET}) {
     return new Future.sync(() {
       _checkExpiration(expiration);
       key = _createKey(key);
-      return _raw.set([_createSetOperation(key, value, action, expiration)])
-          .then((List<raw.SetResult> response) {
-            if (response.length != 1) {
-              // TODO(sgjesse): Improve error.
-              throw const MemcacheError.internalError();
-            }
-            var result = response.first;
-            if (result.status == raw.Status.NO_ERROR) return null;
-            if (result.status == raw.Status.NOT_STORED) {
-              throw const NotStoredError();
-            }
-            if (result.status == raw.Status.KEY_EXISTS) {
-              throw const ModifiedError();
-            }
-            throw new MemcacheError(result.status, 'Error storing item');
-          });
+      return _raw
+          .set([_createSetOperation(key, value, action, expiration)]).then(
+              (List<raw.SetResult> response) {
+        if (response.length != 1) {
+          // TODO(sgjesse): Improve error.
+          throw const MemcacheError.internalError();
+        }
+        var result = response.first;
+        if (result.status == raw.Status.NO_ERROR) return null;
+        if (result.status == raw.Status.NOT_STORED) {
+          throw const NotStoredError();
+        }
+        if (result.status == raw.Status.KEY_EXISTS) {
+          throw const ModifiedError();
+        }
+        throw new MemcacheError(result.status, 'Error storing item');
+      });
     });
   }
 
   Future setAll(Map keysAndValues,
-                {Duration expiration, SetAction action: SetAction.SET}) {
+      {Duration expiration, SetAction action: SetAction.SET}) {
     return new Future.sync(() {
       _checkExpiration(expiration);
       var request = <raw.SetOperation>[];
@@ -221,42 +226,41 @@ class MemCacheImpl implements Memcache {
         key = _createKey(key);
         request.add(_createSetOperation(key, value, action, expiration));
       });
-      return _raw.set(request)
-          .then((List<raw.SetResult> response) {
-            if (response.length != request.length) {
-              throw const MemcacheError.internalError();
-            }
-            response.forEach((raw.SetResult result) {
-              if (result.status == raw.Status.NO_ERROR) return;
-              if (result.status == raw.Status.NOT_STORED) {
-                // If one element is not stored throw NotStored.
-                throw const NotStoredError();
-              }
-              if (result.status == raw.Status.KEY_EXISTS) {
-                // If one element is modified throw Modified.
-                throw const ModifiedError();
-              }
-              // If one element has another status throw.
-              throw new MemcacheError(result.status, 'Error storing item');
-            });
-            return null;
-          });
+      return _raw.set(request).then((List<raw.SetResult> response) {
+        if (response.length != request.length) {
+          throw const MemcacheError.internalError();
+        }
+        response.forEach((raw.SetResult result) {
+          if (result.status == raw.Status.NO_ERROR) return;
+          if (result.status == raw.Status.NOT_STORED) {
+            // If one element is not stored throw NotStored.
+            throw const NotStoredError();
+          }
+          if (result.status == raw.Status.KEY_EXISTS) {
+            // If one element is modified throw Modified.
+            throw const ModifiedError();
+          }
+          // If one element has another status throw.
+          throw new MemcacheError(result.status, 'Error storing item');
+        });
+        return null;
+      });
     });
   }
 
   Future remove(key) {
     return new Future.sync(() => _raw.remove([_createRemoveOperation(key)]))
         .then((List<raw.RemoveResult> responses) {
-          final result = responses[0];
-          if (result.status != raw.Status.NO_ERROR &&
-              result.status != raw.Status.KEY_NOT_FOUND) {
-            throw new MemcacheError(result.status, 'Error removing item');
-          }
+      final result = responses[0];
+      if (result.status != raw.Status.NO_ERROR &&
+          result.status != raw.Status.KEY_NOT_FOUND) {
+        throw new MemcacheError(result.status, 'Error removing item');
+      }
 
-          // The remove is considered succesful no matter whether the key was
-          // there or not.
-          return null;
-        });
+      // The remove is considered succesful no matter whether the key was
+      // there or not.
+      return null;
+    });
   }
 
   Future removeAll(Iterable keys) {
@@ -282,21 +286,22 @@ class MemCacheImpl implements Memcache {
   }
 
   Future<int> increment(key, {int delta: 1, int initialValue: 0}) {
-    var direction = delta >= 0 ? raw.IncrementOperation.INCREMENT
-                               : raw.IncrementOperation.DECREMENT;
-    return new Future.sync(() => _raw.increment(
-        [_createIncrementOperation(key, direction, delta.abs(), initialValue)]))
-        .then((List<raw.IncrementResult> responses) {
-          if (responses.length != 1) {
-            // TODO(sgjesse): Improve error.
-            throw const MemcacheError.internalError();
-          }
-          var response = responses[0];
-          if (response.status != raw.Status.NO_ERROR) {
-            throw new MemcacheError(response.status, response.message);
-          }
-          return response.value;
-        });
+    var direction = delta >= 0
+        ? raw.IncrementOperation.INCREMENT
+        : raw.IncrementOperation.DECREMENT;
+    return new Future.sync(() => _raw.increment([
+          _createIncrementOperation(key, direction, delta.abs(), initialValue)
+        ])).then((List<raw.IncrementResult> responses) {
+      if (responses.length != 1) {
+        // TODO(sgjesse): Improve error.
+        throw const MemcacheError.internalError();
+      }
+      var response = responses[0];
+      if (response.status != raw.Status.NO_ERROR) {
+        throw new MemcacheError(response.status, response.message);
+      }
+      return response.value;
+    });
   }
 
   Future<int> decrement(key, {int delta: 1, int initialValue: 0}) {

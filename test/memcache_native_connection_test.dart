@@ -27,43 +27,49 @@ class Memcached {
       // process environment for writing the actual port used.
       var portFileName =
           '${tempDir.path}${Platform.pathSeparator}memcached_port';
-      Process.start(
-          "/usr/bin/memcached",
-          ['-vvv', '-l', '127.0.0.1', '-p', '-1', '-U', '0'],
-          environment: {'MEMCACHED_PORT_FILENAME': portFileName})
-        .then((process) {
-          var memcached = new Memcached._(process);
-          bool listening = false;
-          // Write all stdout to a string buffer.
-          process.stdout.transform(utf8.decoder).listen(memcached.stdout.write);
-          process.stderr.transform(utf8.decoder).listen((s) {
-            // Write all stderr to a string buffer.
-            memcached.stderr.write(s);
-            // Wait for the server to be listening. This is signalled by the
-            // string "server listening" being written on stderr.
-            if (!listening) {
-              if (memcached.stderr.toString().contains("server listening")) {
-                listening = true;
-                // When server is listening get the port form the file.
-                new File(portFileName).readAsString().then((fileContent) {
-                  // When only listening on a TCP port the file contains the
-                  // following text:
-                  // TCP INET: <port>
-                  RegExp portMatch =
-                      new RegExp(r"^\s*TCP INET:\s*([0-9]*)\s*$", multiLine: true);
-                  try {
-                    memcached.port =
-                        int.parse(portMatch.firstMatch(fileContent).group(1));
-                  } catch (e) {
-                    completer.completeError('Unable to get memcached port: $e');
-                    return;
-                  }
-                  completer.complete(memcached);
-                });
-              }
+      Process.start("/usr/bin/memcached", [
+        '-vvv',
+        '-l',
+        '127.0.0.1',
+        '-p',
+        '-1',
+        '-U',
+        '0'
+      ], environment: {
+        'MEMCACHED_PORT_FILENAME': portFileName
+      }).then((process) {
+        var memcached = new Memcached._(process);
+        bool listening = false;
+        // Write all stdout to a string buffer.
+        process.stdout.transform(utf8.decoder).listen(memcached.stdout.write);
+        process.stderr.transform(utf8.decoder).listen((s) {
+          // Write all stderr to a string buffer.
+          memcached.stderr.write(s);
+          // Wait for the server to be listening. This is signalled by the
+          // string "server listening" being written on stderr.
+          if (!listening) {
+            if (memcached.stderr.toString().contains("server listening")) {
+              listening = true;
+              // When server is listening get the port form the file.
+              new File(portFileName).readAsString().then((fileContent) {
+                // When only listening on a TCP port the file contains the
+                // following text:
+                // TCP INET: <port>
+                RegExp portMatch = new RegExp(r"^\s*TCP INET:\s*([0-9]*)\s*$",
+                    multiLine: true);
+                try {
+                  memcached.port =
+                      int.parse(portMatch.firstMatch(fileContent).group(1));
+                } catch (e) {
+                  completer.completeError('Unable to get memcached port: $e');
+                  return;
+                }
+                completer.complete(memcached);
+              });
             }
-          });
+          }
         });
+      });
     });
     return completer.future;
   }
@@ -111,8 +117,8 @@ main() {
     tearDown(stopMemcached);
 
     Future testGetUpdateGet(Request getRequest, Request updateRequest) {
-      return MemCacheNativeConnection.connect(
-          "127.0.0.1", memcached.port).then((connection) {
+      return MemCacheNativeConnection.connect("127.0.0.1", memcached.port)
+          .then((connection) {
         return connection.sendRequest(getRequest).then((response) {
           expect(response.status, ResponseStatus.KEY_NOT_FOUND);
           expect(response.opcode, getRequest.opcode);
@@ -151,10 +157,12 @@ main() {
             new Timer(new Duration(milliseconds: 200), checkExpired);
           }
         }).catchError(completer.completeError);
-      };
+      }
 
-      return MemCacheNativeConnection.connect(
-          "127.0.0.1", memcached.port).then((conn) {
+      ;
+
+      return MemCacheNativeConnection.connect("127.0.0.1", memcached.port)
+          .then((conn) {
         connection = conn;
         return connection.sendRequest(add).then((response) {
           expect(response.status, ResponseStatus.NO_ERROR);
@@ -170,14 +178,12 @@ main() {
     });
 
     test('get-set-get long key and value', () {
-      return testGetUpdateGet(
-          new Request.get(new Uint8List(64)),
+      return testGetUpdateGet(new Request.get(new Uint8List(64)),
           new Request.set(new Uint8List(64), new Uint8List(1024)));
     });
 
     test('get-set-get max key and value', () {
-      return testGetUpdateGet(
-          new Request.get(new Uint8List(250)),
+      return testGetUpdateGet(new Request.get(new Uint8List(250)),
           new Request.set(new Uint8List(250), new Uint8List(1024)));
     });
 
@@ -214,8 +220,8 @@ main() {
 */
     test('add-add', () {
       var request = new Request.add([1], [1]);
-      return MemCacheNativeConnection.connect(
-          "127.0.0.1", memcached.port).then((connection) {
+      return MemCacheNativeConnection.connect("127.0.0.1", memcached.port)
+          .then((connection) {
         return connection.sendRequest(request).then((response) {
           expect(response.status, ResponseStatus.NO_ERROR);
           expect(response.opcode, request.opcode);
@@ -231,8 +237,8 @@ main() {
       var add = new Request.add([1], [1]);
       var replace = new Request.replace([1], [2]);
       var get = new Request.get([1]);
-      return MemCacheNativeConnection.connect(
-          "127.0.0.1", memcached.port).then((connection) {
+      return MemCacheNativeConnection.connect("127.0.0.1", memcached.port)
+          .then((connection) {
         return connection.sendRequest(replace).then((response) {
           expect(response.status, ResponseStatus.KEY_NOT_FOUND);
           expect(response.opcode, replace.opcode);
@@ -257,8 +263,8 @@ main() {
       var add = new Request.add([1], [1]);
       var get = new Request.get([1]);
       var delete = new Request.delete([1]);
-      return MemCacheNativeConnection.connect(
-          "127.0.0.1", memcached.port).then((connection) {
+      return MemCacheNativeConnection.connect("127.0.0.1", memcached.port)
+          .then((connection) {
         return connection.sendRequest(add).then((response) {
           expect(response.status, ResponseStatus.NO_ERROR);
           expect(response.opcode, add.opcode);
@@ -288,8 +294,8 @@ main() {
     });
 
     test('version', () {
-      return MemCacheNativeConnection.connect(
-          "127.0.0.1", memcached.port).then((connection) {
+      return MemCacheNativeConnection.connect("127.0.0.1", memcached.port)
+          .then((connection) {
         return connection.sendRequest(new Request.version()).then((response) {
           expect(response.valueAsString.contains('.'), isTrue);
         });
@@ -300,25 +306,24 @@ main() {
       // Max key length is 250.
       var invalidKey = new Uint8List(251);
       var get = new Request.get(invalidKey);
-      return MemCacheNativeConnection.connect(
-          "127.0.0.1", memcached.port).then((connection) {
-
+      return MemCacheNativeConnection.connect("127.0.0.1", memcached.port)
+          .then((connection) {
         Future testError(Request request, int expectedError) {
           return connection.sendRequest(get).then((response) {
             expect(response.status, expectedError);
           });
         }
 
-        return testError(new Request.get(invalidKey),
-                         ResponseStatus.INVALID_ARGUMENTS);
+        return testError(
+            new Request.get(invalidKey), ResponseStatus.INVALID_ARGUMENTS);
       });
     });
 
     test('increment', () {
       var incr = new Request.increment([1], 1, 0);
       var incr2 = new Request.increment([1], 0xffffffffffffffff, 0);
-      return MemCacheNativeConnection.connect(
-          "127.0.0.1", memcached.port).then((connection) {
+      return MemCacheNativeConnection.connect("127.0.0.1", memcached.port)
+          .then((connection) {
         return connection.sendRequest(incr).then((response) {
           expect(response.status, ResponseStatus.NO_ERROR);
           expect(response.opcode, incr.opcode);
@@ -345,8 +350,8 @@ main() {
     test('decrement', () {
       var decr = new Request.decrement([1], 1, 10);
       var decr2 = new Request.decrement([1], 0xffffffffffffffff, 10);
-      return MemCacheNativeConnection.connect(
-          "127.0.0.1", memcached.port).then((connection) {
+      return MemCacheNativeConnection.connect("127.0.0.1", memcached.port)
+          .then((connection) {
         return connection.sendRequest(decr).then((response) {
           expect(response.status, ResponseStatus.NO_ERROR);
           expect(response.opcode, decr.opcode);
@@ -375,8 +380,8 @@ main() {
       // should not be set.
       var incr = new Request.increment([1], 1, 0, expiration: 0xffffffff);
       var decr = new Request.increment([1], 1, 0, expiration: 0xffffffff);
-      return MemCacheNativeConnection.connect(
-          "127.0.0.1", memcached.port).then((connection) {
+      return MemCacheNativeConnection.connect("127.0.0.1", memcached.port)
+          .then((connection) {
         return connection.sendRequest(incr).then((response) {
           expect(response.status, ResponseStatus.KEY_NOT_FOUND);
           expect(response.opcode, incr.opcode);
@@ -392,8 +397,8 @@ main() {
       // Use string number representation for setting.
       var set = new Request.set([1], '42'.codeUnits);
       var incr = new Request.increment([1], 1, 0);
-      return MemCacheNativeConnection.connect(
-          "127.0.0.1", memcached.port).then((connection) {
+      return MemCacheNativeConnection.connect("127.0.0.1", memcached.port)
+          .then((connection) {
         return connection.sendRequest(set).then((response) {
           expect(response.status, ResponseStatus.NO_ERROR);
           expect(response.opcode, set.opcode);

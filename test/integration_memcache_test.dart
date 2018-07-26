@@ -2,8 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library integration_memcache_test;
-
 import 'dart:async';
 
 import 'package:test/test.dart';
@@ -12,6 +10,7 @@ import 'package:memcache/memcache_raw.dart' as raw;
 import 'package:memcache/src/memcache_impl.dart';
 
 import 'memcache_native_connection_test.dart' show Memcached;
+import 'test_utils.dart';
 
 main() async {
   final Memcached memcached = await Memcached.start();
@@ -175,16 +174,3 @@ main() async {
     });
   });
 }
-
-class _MemcacheError extends TypeMatcher {
-  const _MemcacheError() : super("MemcacheError");
-  bool matches(item, Map matchState) => item is MemcacheError;
-}
-
-class _MemcacheNotStoredError extends TypeMatcher {
-  const _MemcacheNotStoredError() : super("NotStoredError");
-  bool matches(item, Map matchState) => item is NotStoredError;
-}
-
-const isMemcacheError = const _MemcacheError();
-const isMemcacheNotStored = const _MemcacheNotStoredError();

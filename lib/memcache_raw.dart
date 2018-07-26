@@ -206,7 +206,6 @@ class BinaryMemcacheProtocol implements RawMemcache {
 
     final List<api.Response> responses = await Future.wait(futures);
     return responses.map((api.Response response) {
-
       switch (response.status) {
         case api.ResponseStatus.NO_ERROR:
           return new SetResult(Status.NO_ERROR, null);
