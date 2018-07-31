@@ -60,12 +60,12 @@ Future testParserError(List<int> message, Function f) {
   var controller = new StreamController<List<int>>();
   controller.add(message);
   controller.close();
-  controller.stream.transform(new ResponseTransformer()).listen(
-      (_) => completer.completeError('Unexpected message'),
-      onError: f,
-      onDone: expectAsync0(() {
-        if (!completer.isCompleted) completer.complete();
-      }));
+  controller.stream
+      .transform(new ResponseTransformer())
+      .listen((_) => completer.completeError('Unexpected message'), onError: f,
+          onDone: expectAsync0(() {
+    if (!completer.isCompleted) completer.complete();
+  }));
   return completer.future;
 }
 
@@ -74,8 +74,41 @@ main() {
     test('get-not-found', () {
       // Response for get request:
       // 'key not found' with opaque 0, cas 0 and no value.
-      var bytes = [129, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0,
-                   0, 0, 0, 0, 0, 78, 111, 116, 32, 102, 111, 117, 110, 100];
+      var bytes = [
+        129,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        9,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        78,
+        111,
+        116,
+        32,
+        102,
+        111,
+        117,
+        110,
+        100
+      ];
       var statusMessage = 'Not found';
       testParser(bytes, (Response response) {
         expect(response.magic, Header.RESPOSE_MAGIC);
@@ -95,8 +128,37 @@ main() {
     test('get-found', () {
       // Response for get request:
       // 'key found' with opaque 1, cas 1, flags 1 and value [1].
-      var bytes = [129, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 1, 0, 0, 0,
-                   0, 0, 0, 0, 1, 0, 0, 0, 1, 1];
+      var bytes = [
+        129,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1
+      ];
       testParser(bytes, (Response response) {
         expect(response.magic, Header.RESPOSE_MAGIC);
         expect(response.opcode, Opcode.OPCODE_GET);
@@ -104,7 +166,7 @@ main() {
         expect(response.extrasLength, 4);
         expect(response.dataType, 0);
         expect(response.status, ResponseStatus.NO_ERROR);
-        expect(response.totalBodyLength, 5);  // Includes extras length.
+        expect(response.totalBodyLength, 5); // Includes extras length.
         expect(response.valueLength, 1);
         expect(response.opaque, 1);
         expect(response.cas, 1);
@@ -118,8 +180,38 @@ main() {
     test('getk-found', () {
       // Response for getk request:
       // 'key found' with opaque 2, cas 1, flags 1, key [1] and value [1].
-      var bytes = [129, 12, 0, 1, 4, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 2, 0, 0, 0,
-                   0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1];
+      var bytes = [
+        129,
+        12,
+        0,
+        1,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ];
       testParser(bytes, (Response response) {
         expect(response.magic, Header.RESPOSE_MAGIC);
         expect(response.opcode, Opcode.OPCODE_GETK);
@@ -127,7 +219,7 @@ main() {
         expect(response.extrasLength, 4);
         expect(response.dataType, 0);
         expect(response.status, ResponseStatus.NO_ERROR);
-        expect(response.totalBodyLength, 6);  // Includes extras length.
+        expect(response.totalBodyLength, 6); // Includes extras length.
         expect(response.valueLength, 1);
         expect(response.opaque, 2);
         expect(response.cas, 1);
@@ -140,8 +232,38 @@ main() {
 
     test('version', () {
       // Response for 'version' with version 1.4.13.
-      var bytes = [129, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0,
-                   0, 0, 0, 0, 0, 49, 46, 52, 46, 49, 51];
+      var bytes = [
+        129,
+        11,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        49,
+        46,
+        52,
+        46,
+        49,
+        51
+      ];
       var version = '1.4.13';
       testParser(bytes, (Response response) {
         expect(response.magic, Header.RESPOSE_MAGIC);
@@ -166,20 +288,83 @@ main() {
       // Response for get request:
       // 'key not found' with opaque 0, cas 0 and no value with magic changed
       // from 129 to 128.
-      var bytes = [128, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0,
-                   0, 0, 0, 0, 0, 78, 111, 116, 32, 102, 111, 117, 110, 100];
-      return testParserError(
-          bytes,
+      var bytes = [
+        128,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        9,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        78,
+        111,
+        116,
+        32,
+        102,
+        111,
+        117,
+        110,
+        100
+      ];
+      return testParserError(bytes,
           expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
 
     test('short-message', () {
       // Response for get request:
       // 'key not found' with opaque 0, cas 0 and no value missing last byte.
-      var bytes = [129, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0,
-                   0, 0, 0, 0, 0, 78, 111, 116, 32, 102, 111, 117, 110];
-      return testParserError(
-          bytes,
+      var bytes = [
+        129,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        9,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        78,
+        111,
+        116,
+        32,
+        102,
+        111,
+        117,
+        110
+      ];
+      return testParserError(bytes,
           expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
 
@@ -187,10 +372,39 @@ main() {
       // Response for getk request:
       // 'key found' with opaque 2, cas 1, key [1] and value [1], but with
       // key length changed from 1 to 3.
-      var bytes = [129, 12, 0, 3, 4, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 2, 0, 0, 0,
-                   0, 0, 0, 0, 1, 13, 234, 222, 239, 1, 1];
-      return testParserError(
-          bytes,
+      var bytes = [
+        129,
+        12,
+        0,
+        3,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        13,
+        234,
+        222,
+        239,
+        1,
+        1
+      ];
+      return testParserError(bytes,
           expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
 
@@ -198,10 +412,39 @@ main() {
       // Response for getk request:
       // 'key found' with opaque 2, cas 1, key [1] and value [1], but with
       // extras length changed from 4 to 6.
-      var bytes = [129, 12, 0, 1, 6, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 2, 0, 0, 0,
-                   0, 0, 0, 0, 1, 13, 234, 222, 239, 1, 1];
-      return testParserError(
-          bytes,
+      var bytes = [
+        129,
+        12,
+        0,
+        1,
+        6,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        13,
+        234,
+        222,
+        239,
+        1,
+        1
+      ];
+      return testParserError(bytes,
           expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
 
@@ -209,10 +452,39 @@ main() {
       // Response for getk request:
       // 'key found' with opaque 2, cas 1, key [1] and value [1], but with
       // key length changed from 1 to 2 and extras length changed from 4 to 5.
-      var bytes = [129, 12, 0, 2, 5, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 2, 0, 0, 0,
-                   0, 0, 0, 0, 1, 13, 234, 222, 239, 1, 1];
-      return testParserError(
-          bytes,
+      var bytes = [
+        129,
+        12,
+        0,
+        2,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        13,
+        234,
+        222,
+        239,
+        1,
+        1
+      ];
+      return testParserError(bytes,
           expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
   });
@@ -225,22 +497,19 @@ main() {
       controller.close();
       controller.stream.transform(new ResponseTransformer()).listen(
           (_) => completer.completeError('Unexpected message'),
-          onError: f,
-          onDone: () {
-            if (!completer.isCompleted) completer.complete();
-          });
+          onError: f, onDone: () {
+        if (!completer.isCompleted) completer.complete();
+      });
       return completer.future;
     }
 
     test('stream-error-string', () {
-      return testStreamError(
-          "error",
+      return testStreamError("error",
           expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
 
     test('stream-error-socket', () {
-      return testStreamError(
-          new SocketException("socket exception"),
+      return testStreamError(new SocketException("socket exception"),
           expectAsync1((error) => expect(error is MemCacheError, isTrue)));
     });
   });

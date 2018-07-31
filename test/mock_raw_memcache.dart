@@ -4,7 +4,7 @@
 
 import 'dart:async';
 
-import '../lib/memcache_raw.dart';
+import 'package:memcache/memcache_raw.dart';
 
 class MockRawMemcache implements RawMemcache {
   Function _handleGet;

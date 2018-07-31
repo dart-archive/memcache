@@ -6,26 +6,12 @@ import 'dart:async';
 
 import 'package:test/test.dart';
 
-import '../lib/memcache.dart';
-import '../lib/memcache_raw.dart' as raw;
-import '../lib/src/memcache_impl.dart';
+import 'package:memcache/memcache.dart';
+import 'package:memcache/memcache_raw.dart' as raw;
+import 'package:memcache/src/memcache_impl.dart';
 
 import 'mock_raw_memcache.dart';
-
-
-class _MemcacheModifiedError extends TypeMatcher {
-  const _MemcacheModifiedError() : super("ModifiedError");
-  bool matches(item, Map matchState) => item is ModifiedError;
-}
-
-const isMemcacheModifiedError = const _MemcacheModifiedError();
-
-class _MemcacheError extends TypeMatcher {
-  const _MemcacheError() : super("MemcacheError");
-  bool matches(item, Map matchState) => item is MemcacheError;
-}
-
-const isMemcacheError = const _MemcacheError();
+import 'test_utils.dart';
 
 class IncrementDecrementTestData {
   final key;
@@ -33,10 +19,8 @@ class IncrementDecrementTestData {
   final initialValue;
   final expected;
 
-  IncrementDecrementTestData(this.key,
-                             this.delta,
-                             this.initialValue,
-                             this.expected);
+  IncrementDecrementTestData(
+      this.key, this.delta, this.initialValue, this.expected);
 }
 
 main() {
@@ -50,8 +34,8 @@ main() {
 
       var notFound = new raw.GetResult(
           raw.Status.KEY_NOT_FOUND, 'Not found', 0, null, null);
-      var foundB = new raw.GetResult(
-          raw.Status.NO_ERROR, 'Not found', 0, null, [66]);
+      var foundB =
+          new raw.GetResult(raw.Status.NO_ERROR, 'Not found', 0, null, [66]);
 
       mock.registerGet(expectAsync1((batch) {
         expect(batch.length, 1);
@@ -108,8 +92,8 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     mock.registerGet((List<raw.GetOperation> batch) async {
-      final errorResult = new raw.GetResult(
-          raw.Status.ERROR, 'internal error', 0, 0, []);
+      final errorResult =
+          new raw.GetResult(raw.Status.ERROR, 'internal error', 0, 0, []);
       return new List.generate(batch.length, (_) => errorResult);
     });
 
@@ -125,10 +109,9 @@ main() {
     var keyCD = [67, 68];
     var keys = [keyA, keyCD];
 
-    var foundA = new raw.GetResult(
-        raw.Status.NO_ERROR, null, 0, null, [66]);
-    var foundCD = new raw.GetResult(
-        raw.Status.NO_ERROR, null, 0, null, [69, 70]);
+    var foundA = new raw.GetResult(raw.Status.NO_ERROR, null, 0, null, [66]);
+    var foundCD =
+        new raw.GetResult(raw.Status.NO_ERROR, null, 0, null, [69, 70]);
     mock.registerGet(expectAsync1((batch) {
       expect(batch.length, keys.length);
       for (var i = 0; i < keys.length; i++) {
@@ -140,8 +123,8 @@ main() {
     expect(memcache.getAll(['A', 'CD']), completion({'A': 'B', 'CD': 'EF'}));
     expect(memcache.getAll([keyA, 'CD']), completion({keyA: 'B', 'CD': 'EF'}));
     expect(memcache.getAll(['A', keyCD]), completion({'A': 'B', keyCD: 'EF'}));
-    expect(memcache.getAll([keyA, keyCD]),
-                            completion({keyA: 'B', keyCD: 'EF'}));
+    expect(
+        memcache.getAll([keyA, keyCD]), completion({keyA: 'B', keyCD: 'EF'}));
   });
 
   test('get-all-throws', () {
@@ -152,8 +135,12 @@ main() {
       throw new ArgumentError();
     });
 
-    expect(memcache.getAll(['A', [65]], asBinary: true),
-           throwsA(isArgumentError));
+    expect(
+        memcache.getAll([
+          'A',
+          [65]
+        ], asBinary: true),
+        throwsA(isArgumentError));
   });
 
   test('set', () {
@@ -185,19 +172,19 @@ main() {
         expect(batch[0].operation, operation);
         expect(batch[0].key, [65]);
         expect(batch[0].value, [66]);
-        expect(batch[0].expiration,
-               expiration == null ? 0 : expiration.inSeconds);
+        expect(
+            batch[0].expiration, expiration == null ? 0 : expiration.inSeconds);
         return new Future.value([setOk]);
       }, count: 4));
 
       expect(memcache.set([65], [66], action: action, expiration: expiration),
-             completion(isNull));
+          completion(isNull));
       expect(memcache.set('A', [66], action: action, expiration: expiration),
-             completion(isNull));
+          completion(isNull));
       expect(memcache.set([65], 'B', action: action, expiration: expiration),
-             completion(isNull));
+          completion(isNull));
       expect(memcache.set('A', 'B', action: action, expiration: expiration),
-             completion(isNull));
+          completion(isNull));
     }
 
     var expirations = [null, new Duration(hours: 1), new Duration(days: 30)];
@@ -231,8 +218,8 @@ main() {
     expect(memcache.set([65], 'B'), throwsA(isArgumentError));
     expect(memcache.set('A', 'B'), throwsA(isArgumentError));
     for (var action in [SetAction.SET, SetAction.ADD, SetAction.REPLACE]) {
-      expect(memcache.set([65], [66], action: action),
-             throwsA(isArgumentError));
+      expect(
+          memcache.set([65], [66], action: action), throwsA(isArgumentError));
       expect(memcache.set('A', [66], action: action), throwsA(isArgumentError));
       expect(memcache.set([65], 'B', action: action), throwsA(isArgumentError));
       expect(memcache.set('A', 'B', action: action), throwsA(isArgumentError));
@@ -244,8 +231,7 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     mock.registerSet((List<raw.SetOperation> batch) async {
-      final errorResult = new raw.SetResult(
-          raw.Status.ERROR, 'internal error');
+      final errorResult = new raw.SetResult(raw.Status.ERROR, 'internal error');
       return new List.generate(batch.length, (_) => errorResult);
     });
 
@@ -266,8 +252,8 @@ main() {
     expect(memcache.set([65], 'B'), throwsA(isArgumentError));
     expect(memcache.set('A', 'B'), throwsA(isArgumentError));
     for (var action in [SetAction.SET, SetAction.ADD, SetAction.REPLACE]) {
-      expect(memcache.set([65], [66], action: action),
-             throwsA(isArgumentError));
+      expect(
+          memcache.set([65], [66], action: action), throwsA(isArgumentError));
       expect(memcache.set('A', [66], action: action), throwsA(isArgumentError));
       expect(memcache.set([65], 'B', action: action), throwsA(isArgumentError));
       expect(memcache.set('A', 'B', action: action), throwsA(isArgumentError));
@@ -275,17 +261,32 @@ main() {
 
     var expiration = new Duration(days: 30, seconds: 1);
     expect(memcache.set('A', 'B', expiration: expiration),
-           throwsA(isArgumentError));
+        throwsA(isArgumentError));
   });
 
   var setAllMaps = [
     {'A': 'B', 'CD': 'EF'},
-    {'A': [66], [67, 68]: 'EF'},
-    {[65]: 'B', 'CD': [69, 70]},
-    {[65]: [66], [67, 68]: [69, 70]}
+    {
+      'A': [66],
+      [67, 68]: 'EF'
+    },
+    {
+      [65]: 'B',
+      'CD': [69, 70]
+    },
+    {
+      [65]: [66],
+      [67, 68]: [69, 70]
+    }
   ];
-  var setAllKeys = [[65], [67, 68]];
-  var setAllValues = [[66], [69, 70]];
+  var setAllKeys = [
+    [65],
+    [67, 68]
+  ];
+  var setAllValues = [
+    [66],
+    [69, 70]
+  ];
 
   checkSetAllBatch(batch, operation, expiration) {
     expect(batch.length, setAllKeys.length);
@@ -293,8 +294,8 @@ main() {
       expect(batch[i].operation, operation);
       expect(batch[i].key, setAllKeys[i]);
       expect(batch[i].value, setAllValues[i]);
-      expect(batch[i].expiration,
-             expiration == null ? 0 : expiration.inSeconds);
+      expect(
+          batch[i].expiration, expiration == null ? 0 : expiration.inSeconds);
     }
   }
 
@@ -323,8 +324,8 @@ main() {
       }, count: setAllMaps.length));
 
       for (var m in setAllMaps) {
-        expect(memcache.setAll(
-            m, action: action, expiration: expiration), completes);
+        expect(memcache.setAll(m, action: action, expiration: expiration),
+            completes);
       }
     }
 
@@ -371,10 +372,9 @@ main() {
       expect(memcache.setAll(m), throwsA(isArgumentError));
 
       var expiration = new Duration(days: 30, seconds: 1);
-      expect(memcache.setAll(m, expiration: expiration),
-             throwsA(isArgumentError));
+      expect(
+          memcache.setAll(m, expiration: expiration), throwsA(isArgumentError));
     }
-
   });
 
   test('remove', () {
@@ -407,8 +407,8 @@ main() {
     var memcache = new MemCacheImpl(mock);
 
     mock.registerRemove((List<raw.RemoveOperation> batch) async {
-      final errorResult = new raw.RemoveResult(
-          raw.Status.ERROR, 'internal error');
+      final errorResult =
+          new raw.RemoveResult(raw.Status.ERROR, 'internal error');
       return new List.generate(batch.length, (_) => errorResult);
     });
 
@@ -437,19 +437,27 @@ main() {
       throw new ArgumentError();
     });
 
-    expect(memcache.removeAll(['A', [65]]), throwsA(isArgumentError));
+    expect(
+        memcache.removeAll([
+          'A',
+          [65]
+        ]),
+        throwsA(isArgumentError));
   });
 
   test('increment', () {
     var testData = [];
-    var keys = ['A', [65]];
+    var keys = [
+      'A',
+      [65]
+    ];
     var deltas = [0, 2, -1];
     var initialValues = [0, 2];
     var expected = initialValues[0];
     for (var key in keys) {
       for (var delta in deltas) {
         for (var initialValue in initialValues) {
-          expected += delta;  // This requires the first delta to be 0.
+          expected += delta; // This requires the first delta to be 0.
           testData.add(new IncrementDecrementTestData(
               key, delta, initialValue, expected));
         }
@@ -488,10 +496,10 @@ main() {
     }, count: testData.length));
 
     for (var x in testData) {
-      expect(memcache.increment(x.key,
-                                delta: x.delta,
-                                initialValue: x.initialValue),
-             completion(x.expected));
+      expect(
+          memcache.increment(x.key,
+              delta: x.delta, initialValue: x.initialValue),
+          completion(x.expected));
     }
   });
 
@@ -519,14 +527,17 @@ main() {
 
   test('decrement', () {
     var testData = [];
-    var keys = ['A', [65]];
+    var keys = [
+      'A',
+      [65]
+    ];
     var deltas = [0, 2, -1];
     var initialValues = [100, 2];
     var expected = initialValues[0];
     for (var key in keys) {
       for (var delta in deltas) {
         for (var initialValue in initialValues) {
-          expected -= delta;  // This requires the first delta to be 0.
+          expected -= delta; // This requires the first delta to be 0.
           testData.add([key, delta, initialValue, expected]);
         }
       }
@@ -565,7 +576,7 @@ main() {
 
     for (var x in testData) {
       expect(memcache.decrement(x[0], delta: x[1], initialValue: x[2]),
-             completion(x[3]));
+          completion(x[3]));
     }
   });
 
@@ -625,26 +636,31 @@ main() {
 
   test('to-string', () {
     expect(new raw.GetOperation([65]).toString(), isNotNull);
-    expect(new raw.GetResult(
-        raw.Status.NO_ERROR, null, 0, null, [1]).toString(), isNotNull);
-    expect(new raw.SetOperation(
-        raw.SetOperation.SET,[65], 0, null, [1], 0).toString(), isNotNull);
+    expect(
+        new raw.GetResult(raw.Status.NO_ERROR, null, 0, null, [1]).toString(),
+        isNotNull);
+    expect(
+        new raw.SetOperation(raw.SetOperation.SET, [65], 0, null, [1], 0)
+            .toString(),
+        isNotNull);
     expect(new raw.SetResult(raw.Status.NO_ERROR, null).toString(), isNotNull);
     expect(new raw.RemoveOperation([65]).toString(), isNotNull);
-    expect(new raw.RemoveResult(
-        raw.Status.NO_ERROR, null).toString(), isNotNull);
-    expect(new raw.IncrementOperation(
-        [65], 1, raw.IncrementOperation.INCREMENT, 0, 0).toString(), isNotNull);
-    expect(new raw.IncrementResult(
-        raw.Status.NO_ERROR, null, 1).toString(), isNotNull);
+    expect(
+        new raw.RemoveResult(raw.Status.NO_ERROR, null).toString(), isNotNull);
+    expect(
+        new raw.IncrementOperation(
+                [65], 1, raw.IncrementOperation.INCREMENT, 0, 0)
+            .toString(),
+        isNotNull);
+    expect(new raw.IncrementResult(raw.Status.NO_ERROR, null, 1).toString(),
+        isNotNull);
   });
 
   group('memcache-with-cas', () {
     var mock;
     var memcache;
     var cas = 0xCA5;
-    var result = new raw.GetResult(
-        raw.Status.NO_ERROR, null, 0, cas, [66]);
+    var result = new raw.GetResult(raw.Status.NO_ERROR, null, 0, cas, [66]);
 
     setUp(() {
       mock = new MockRawMemcache();
@@ -657,7 +673,7 @@ main() {
       }));
     });
 
-    tearDown((){
+    tearDown(() {
       mock = null;
       memcache = null;
     });
@@ -730,8 +746,8 @@ main() {
           check(batch, raw.SetOperation.REPLACE);
           return new Future.value([setOk]);
         }));
-        return memcache.set([65], [66],
-                            action: SetAction.REPLACE).then((value) {
+        return memcache
+            .set([65], [66], action: SetAction.REPLACE).then((value) {
           expect(value, isNull);
         });
       });
@@ -744,9 +760,10 @@ main() {
     var key1 = [65];
     var casA = 0xCA5;
     var casB = 0xCA2;
-    var result =
-        [ new raw.GetResult(raw.Status.NO_ERROR, null, 0, casA, [67]),
-          new raw.GetResult(raw.Status.NO_ERROR, null, 0, casB, [68]) ];
+    var result = [
+      new raw.GetResult(raw.Status.NO_ERROR, null, 0, casA, [67]),
+      new raw.GetResult(raw.Status.NO_ERROR, null, 0, casB, [68])
+    ];
 
     setUp(() {
       mock = new MockRawMemcache();
@@ -760,7 +777,7 @@ main() {
       }));
     });
 
-    tearDown((){
+    tearDown(() {
       mock = null;
       memcache = null;
     });
@@ -789,7 +806,10 @@ main() {
           check(batch);
           return new Future.value([setOk, setOk]);
         }));
-        return memcache.setAll({key1: 'C', 'B': [68]}).then((value) {
+        return memcache.setAll({
+          key1: 'C',
+          'B': [68]
+        }).then((value) {
           expect(value, isNull);
         });
       });
@@ -805,8 +825,12 @@ main() {
           check(batch);
           return new Future.value([setOk, exists]);
         }));
-        expect(memcache.setAll({key1: 'C', 'B': [68]}),
-               throwsA(isMemcacheModifiedError));
+        expect(
+            memcache.setAll({
+              key1: 'C',
+              'B': [68]
+            }),
+            throwsA(isMemcacheModifiedError));
       });
     });
 
@@ -818,8 +842,10 @@ main() {
           check(batch, raw.SetOperation.ADD);
           return new Future.value([setOk, setOk]);
         }));
-        return memcache.setAll({key1: 'C', 'B': [68]},
-                               action: SetAction.ADD).then((value) {
+        return memcache.setAll({
+          key1: 'C',
+          'B': [68]
+        }, action: SetAction.ADD).then((value) {
           expect(value, isNull);
         });
       });
@@ -833,8 +859,10 @@ main() {
           check(batch, raw.SetOperation.REPLACE);
           return new Future.value([setOk, setOk]);
         }));
-        return memcache.setAll({key1: 'C', 'B': [68]},
-                               action: SetAction.REPLACE).then((value) {
+        return memcache.setAll({
+          key1: 'C',
+          'B': [68]
+        }, action: SetAction.REPLACE).then((value) {
           expect(value, isNull);
         });
       });
@@ -852,7 +880,7 @@ main() {
       memcache = new MemCacheImpl(mock);
     });
 
-    tearDown((){
+    tearDown(() {
       mock = null;
       memcache = null;
     });

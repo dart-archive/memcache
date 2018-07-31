@@ -38,7 +38,8 @@ class NotStoredError extends MemcacheError {
  * is used and the item has been modified after it was fetched.
  */
 class ModifiedError extends MemcacheError {
-  const ModifiedError() : super(null, 'Item exists with a different CAS value.');
+  const ModifiedError()
+      : super(null, 'Item exists with a different CAS value.');
 }
 
 /**
@@ -133,7 +134,7 @@ abstract class Memcache {
    *     m.set([0, 1, 2], [3, 4, 5], expiration: new Duration(hours: 1));
    */
   Future set(key, value,
-             {Duration expiration, SetAction action: SetAction.SET});
+      {Duration expiration, SetAction action: SetAction.SET});
 
   /**
    * Sets multiple values in memcache.
@@ -159,7 +160,7 @@ abstract class Memcache {
    * first failure encountered. There might be different failures as well.
    */
   Future setAll(Map keysAndValues,
-                {Duration expiration, SetAction action: SetAction.SET});
+      {Duration expiration, SetAction action: SetAction.SET});
 
   /**
    * Removes the key from memcache.

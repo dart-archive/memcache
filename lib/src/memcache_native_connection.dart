@@ -193,8 +193,7 @@ class Header {
 
   List<int> get key {
     if (keyLength == 0) return null;
-    return bytes.sublist(
-        Response.HEADER_LEN + extrasLength,
+    return bytes.sublist(Response.HEADER_LEN + extrasLength,
         Response.HEADER_LEN + extrasLength + keyLength);
   }
 
@@ -210,7 +209,6 @@ class Header {
     return utf8.decode(valueInBytes);
   }
 
-
   String formatHex(int value, int bytes) {
     // TODO(kevmoo) Use String.padLeft here?
     const String zeros = '0000000000000000';
@@ -219,8 +217,8 @@ class Header {
   }
 
   static int totalBodyLengthFromHeader(Uint8List header) {
-    return new ByteData.view(header.buffer, header.offsetInBytes).getUint32(
-        TOTAL_BODY_LENGTH_OFFSET, Endian.big);
+    return new ByteData.view(header.buffer, header.offsetInBytes)
+        .getUint32(TOTAL_BODY_LENGTH_OFFSET, Endian.big);
   }
 }
 
@@ -282,28 +280,26 @@ class Request extends Header {
   static final int INCREMENT_EXPIRATION_OFFSET = HEADER_LEN + 16;
 
   static final int GET_EXTRAS_LENGTH = 0;
-  static final int SET_EXTRAS_LENGTH = 8;  // Flags and expiration.
-  static final int ADD_EXTRAS_LENGTH = 8;  // Flags and expiration.
-  static final int REPLACE_EXTRAS_LENGTH = 8;  // Flags and expiration.
+  static final int SET_EXTRAS_LENGTH = 8; // Flags and expiration.
+  static final int ADD_EXTRAS_LENGTH = 8; // Flags and expiration.
+  static final int REPLACE_EXTRAS_LENGTH = 8; // Flags and expiration.
   static final int DELETE_EXTRAS_LENGTH = 0;
   // Delta, initial and expiration.
   static final int INCREMENT_EXTRAS_LENGTH = 20;
 
-  Request(int opcode, int extrasLen,
-          List<int> key, List<int> value, [int cas = 0])
+  Request(int opcode, int extrasLen, List<int> key, List<int> value,
+      [int cas = 0])
       : super(new Uint8List(HEADER_LEN +
-                            extrasLen +
-                            (key != null ? key.length : 0) +
-                            (value != null ? value.length : 0))) {
+            extrasLen +
+            (key != null ? key.length : 0) +
+            (value != null ? value.length : 0))) {
     bytes[Header.MAGIC_OFFSET] = Header.REQUEST_MAGIC;
     bytes[Header.OPCODE_OFFSET] = opcode;
-    data.setUint16(Header.KEY_LENGTH_OFFSET,
-                   key != null ? key.length : 0,
-                   Endian.big);
+    data.setUint16(
+        Header.KEY_LENGTH_OFFSET, key != null ? key.length : 0, Endian.big);
     bytes[Header.EXTRAS_LENGTH_OFFSET] = extrasLen;
-    data.setUint32(Header.TOTAL_BODY_LENGTH_OFFSET,
-                   bytes.length - HEADER_LEN,
-                   Endian.big);
+    data.setUint32(
+        Header.TOTAL_BODY_LENGTH_OFFSET, bytes.length - HEADER_LEN, Endian.big);
     data.setUint32(Header.OPAQUE_OFFSET, 0, Endian.big);
     data.setUint64(Header.CAS_OFFSET, cas, Endian.big);
     var keyOffset = HEADER_LEN + extrasLen;
@@ -343,20 +339,20 @@ class Request extends Header {
     return request;
   }
 
-  factory Request.add(
-      List<int> key, List<int> value, {int flags: 0, int expiration: 0}) {
+  factory Request.add(List<int> key, List<int> value,
+      {int flags: 0, int expiration: 0}) {
     return new Request._update(
         Opcode.OPCODE_ADD, key, value, flags, expiration, 0);
   }
 
   factory Request.set(List<int> key, List<int> value,
-                      {int flags: 0, int expiration: 0, int cas: 0}) {
+      {int flags: 0, int expiration: 0, int cas: 0}) {
     return new Request._update(
         Opcode.OPCODE_SET, key, value, flags, expiration, cas);
   }
 
   factory Request.replace(List<int> key, List<int> value,
-                          {int flags: 0, int expiration: 0, int cas: 0}) {
+      {int flags: 0, int expiration: 0, int cas: 0}) {
     return new Request._update(
         Opcode.OPCODE_REPLACE, key, value, flags, expiration, cas);
   }
@@ -366,50 +362,46 @@ class Request extends Header {
         Opcode.OPCODE_DELETE, DELETE_EXTRAS_LENGTH, key, null, cas);
   }
 
-  factory Request._update(int opcode, List<int> key, List<int> value,
-                          int flags, int expiration, int cas) {
+  factory Request._update(int opcode, List<int> key, List<int> value, int flags,
+      int expiration, int cas) {
     var extrasLength;
-        switch (opcode) {
-          case Opcode.OPCODE_SET:
-            extrasLength = SET_EXTRAS_LENGTH;
-            break;
-          case Opcode.OPCODE_ADD:
-            extrasLength = ADD_EXTRAS_LENGTH;
-            break;
-          case Opcode.OPCODE_REPLACE:
-            extrasLength = REPLACE_EXTRAS_LENGTH;
-            break;
-          default:
-            throw "Unsupported";
-        }
+    switch (opcode) {
+      case Opcode.OPCODE_SET:
+        extrasLength = SET_EXTRAS_LENGTH;
+        break;
+      case Opcode.OPCODE_ADD:
+        extrasLength = ADD_EXTRAS_LENGTH;
+        break;
+      case Opcode.OPCODE_REPLACE:
+        extrasLength = REPLACE_EXTRAS_LENGTH;
+        break;
+      default:
+        throw "Unsupported";
+    }
     var request = new Request(opcode, extrasLength, key, value, cas);
     request.data.setUint32(FLAGS_OFFSET, flags, Endian.big);
-    request.data.setUint32(
-        EXPIRATION_OFFSET, expiration, Endian.big);
+    request.data.setUint32(EXPIRATION_OFFSET, expiration, Endian.big);
     return request;
   }
 
-  factory Request.increment(
-      List<int> key, int delta, int initialValue, {int expiration: 0}) {
+  factory Request.increment(List<int> key, int delta, int initialValue,
+      {int expiration: 0}) {
     return new Request._incrDecr(
         Opcode.OPCODE_INCREMENT, key, delta, initialValue, expiration);
   }
 
-  factory Request.decrement(
-      List<int> key, int delta, int initialValue, {int expiration: 0}) {
+  factory Request.decrement(List<int> key, int delta, int initialValue,
+      {int expiration: 0}) {
     return new Request._incrDecr(
         Opcode.OPCODE_DECREMENT, key, delta, initialValue, expiration);
   }
 
-  factory Request._incrDecr(int opcode,
-      List<int> key, int delta, int initialValue, int expiration) {
-    var request = new Request(
-        opcode, INCREMENT_EXTRAS_LENGTH, key, null);
+  factory Request._incrDecr(
+      int opcode, List<int> key, int delta, int initialValue, int expiration) {
+    var request = new Request(opcode, INCREMENT_EXTRAS_LENGTH, key, null);
     request.data.setUint64(DELTA_OFFSET, delta, Endian.big);
-    request.data.setUint64(
-        INITIAL_VALUE_OFFSET, initialValue, Endian.big);
-    request.data.setUint32(
-        INCREMENT_EXPIRATION_OFFSET, expiration, Endian.big);
+    request.data.setUint64(INITIAL_VALUE_OFFSET, initialValue, Endian.big);
+    request.data.setUint32(INCREMENT_EXPIRATION_OFFSET, expiration, Endian.big);
     return request;
   }
 
@@ -428,11 +420,10 @@ class Request extends Header {
     }
   }
 
-  String toString() =>
-      'MemCache Request:\n'
+  String toString() => 'MemCache Request:\n'
       '  Magic        (0)    : ${formatHex(magic, 1)}\n'
       '  Opcode       (1)    : '
-          '${formatHex(opcode, 1)} (${Opcode.name(opcode)})\n'
+      '${formatHex(opcode, 1)} (${Opcode.name(opcode)})\n'
       '  Key length   (2,3)  : ${formatHex(keyLength, 2)}\n'
       '  Extra length (4)    : ${formatHex(extrasLength, 1)}\n'
       '  Data type    (5)    : ${formatHex(dataType, 1)}\n'
@@ -487,7 +478,7 @@ class Response extends Header {
   static const int FLAGS_OFFSET = HEADER_LEN;
   static const int INCREMENT_VALUE_OFFSET = HEADER_LEN;
 
-  Response(Uint8List header): super(header);
+  Response(Uint8List header) : super(header);
 
   int get status => vbucketIdOrStatus;
 
@@ -509,15 +500,14 @@ class Response extends Header {
       return data.getUint64(INCREMENT_VALUE_OFFSET, Endian.big);
     } else {
       throw new MemCacheError('Request for $opcode does not contain '
-                              'incremented/decremented value');
+          'incremented/decremented value');
     }
   }
 
-  String toString() =>
-      'MemCache Response:\n'
+  String toString() => 'MemCache Response:\n'
       '  Magic        (0)    : ${formatHex(magic, 1)}\n'
       '  Opcode       (1)    : '
-          '${formatHex(opcode, 1)} (${Opcode.name(opcode)})\n'
+      '${formatHex(opcode, 1)} (${Opcode.name(opcode)})\n'
       '  Key length   (2,3)  : ${formatHex(keyLength, 2)}\n'
       '  Extra length (4)    : ${formatHex(extrasLength, 1)}\n'
       '  Data type    (5)    : ${formatHex(dataType, 1)}\n'
@@ -544,15 +534,12 @@ class PendingRequest {
   }
 }
 
-class ResponseTransformer
-    extends StreamTransformerBase<List<int>, Response> {
+class ResponseTransformer extends StreamTransformerBase<List<int>, Response> {
   const ResponseTransformer();
 
   Stream<Response> bind(Stream<List<int>> stream) {
-    return new Stream<Response>.eventTransformed(
-        stream,
-        (EventSink<Response> sink) =>
-            new _ResponseTransformerSink(sink));
+    return new Stream<Response>.eventTransformed(stream,
+        (EventSink<Response> sink) => new _ResponseTransformerSink(sink));
   }
 }
 
@@ -569,7 +556,7 @@ class _ResponseTransformerSink implements EventSink<List<int>> {
   int state = STATE_START;
   final Uint8List header = new Uint8List(Response.HEADER_LEN);
   int remaining;
-  Response response;  // Current response being received.
+  Response response; // Current response being received.
 
   final EventSink<Response> _outSink;
 
@@ -624,8 +611,8 @@ class _ResponseTransformerSink implements EventSink<List<int>> {
           if (bytes is Uint8List && (length - index) >= Response.HEADER_LEN) {
             var totalBodyLengthIndex = index + Header.TOTAL_BODY_LENGTH_OFFSET;
             var totalBodyLength = new ByteData.view(
-                bytes.buffer, bytes.offsetInBytes + totalBodyLengthIndex, 4)
-                    .getUint32(0, Endian.big);
+                    bytes.buffer, bytes.offsetInBytes + totalBodyLengthIndex, 4)
+                .getUint32(0, Endian.big);
             var totalMessageLength = Response.HEADER_LEN + totalBodyLength;
             if (length - index >= totalMessageLength) {
               if (index == 0 && bytes.length == totalMessageLength) {
@@ -653,7 +640,8 @@ class _ResponseTransformerSink implements EventSink<List<int>> {
         case STATE_HEADER:
           // Fill as many header bytes as possible.
           int headerBytes = (bytes.length - index) >= remaining
-              ? remaining : (bytes.length - index);
+              ? remaining
+              : (bytes.length - index);
           int headerIndex = Response.HEADER_LEN - remaining;
           for (int i = 0; i < headerBytes; i++) {
             header[headerIndex + i] = bytes[index + i];
@@ -679,7 +667,8 @@ class _ResponseTransformerSink implements EventSink<List<int>> {
         case STATE_BODY:
           // Fill as many body bytes as possible.
           int bodyBytes = (bytes.length - index) >= remaining
-              ? remaining : (bytes.length - index);
+              ? remaining
+              : (bytes.length - index);
           int bodyIndex =
               Response.HEADER_LEN + response.totalBodyLength - remaining;
           for (int i = 0; i < bodyBytes; i++) {
@@ -714,8 +703,8 @@ class MemCacheNativeConnection {
   bool _closed = false;
 
   MemCacheNativeConnection._(this._socket) {
-    _socket.transform(new ResponseTransformer()).listen(
-        onResponse, onError: onError, onDone: onDone, cancelOnError: true);
+    _socket.transform(new ResponseTransformer()).listen(onResponse,
+        onError: onError, onDone: onDone, cancelOnError: true);
   }
 
   static Future<MemCacheNativeConnection> connect(server, int port) {
