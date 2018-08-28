@@ -746,7 +746,7 @@ class MemCacheNativeConnection {
   }
 
   void onError(error) {
-    close(error);
+    close(error is MemCacheError ? error.message : error?.toString());
   }
 
   void onDone() {
