@@ -1,3 +1,7 @@
+## 0.3.0+2
+
+* Fix `onError` type cast error.
+
 ## 0.3.0
 
 * Update code for Dart 2.
